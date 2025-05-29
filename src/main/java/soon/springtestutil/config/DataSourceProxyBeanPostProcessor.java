@@ -14,6 +14,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
+import soon.springtestutil.querycount.QueryCountListener;
 
 /**
  * DataSource 빈을 프록시로 감싸는 BeanPostProcessor입니다.
@@ -45,6 +46,7 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor {
         private ProxyDataSourceInterceptor(DataSource dataSource) {
             ChainListener listener = new ChainListener();
             listener.addListener(new SLF4JQueryLoggingListener());
+            listener.addListener(new QueryCountListener());
 
             this.dataSource = ProxyDataSourceBuilder.create(dataSource)
                 .name("DataSource-Proxy")
