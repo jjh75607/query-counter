@@ -1,5 +1,5 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'org.springframework.boot' version '3.5.0'
     id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -25,13 +25,10 @@ repositories {
 
 dependencies {
     // junit
-    implementation 'org.junit.jupiter:junit-jupiter-api'
-    implementation 'org.opentest4j:opentest4j'
+    api 'org.junit.jupiter:junit-jupiter-api'
 
     // Spring
-    compileOnly 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter'
 
     // datasource-proxy
     implementation 'net.ttddyy:datasource-proxy:1.10.1'
@@ -42,9 +39,6 @@ dependencies {
 
     // test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-
-    // database
-    testRuntimeOnly 'com.h2database:h2'
 }
 
 tasks.named('test') {
