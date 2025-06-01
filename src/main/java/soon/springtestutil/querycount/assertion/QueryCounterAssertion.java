@@ -1,10 +1,13 @@
-package soon.springtestutil.querycount;
+package soon.springtestutil.querycount.assertion;
 
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import soon.springtestutil.core.context.TestContextHolder;
+import soon.springtestutil.querycount.context.QueryCountContext;
+import soon.springtestutil.querycount.QueryType;
 
 public class QueryCounterAssertion {
 

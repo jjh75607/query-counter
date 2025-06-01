@@ -1,4 +1,4 @@
-package soon.springtestutil.querycount;
+package soon.springtestutil.querycount.context;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutorService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import soon.springtestutil.querycount.QueryType;
 
 class QueryCountContextTest {
 

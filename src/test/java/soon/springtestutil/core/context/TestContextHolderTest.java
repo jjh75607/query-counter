@@ -1,4 +1,4 @@
-package soon.springtestutil.querycount;
+package soon.springtestutil.core.context;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.assertj.core.api.Assertions.assertThat;
