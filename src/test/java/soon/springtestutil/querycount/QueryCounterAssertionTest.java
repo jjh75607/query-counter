@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(QueryCountTestExtension.class)
 class QueryCounterAssertionTest {
 
     @AfterEach
@@ -42,8 +44,10 @@ class QueryCounterAssertionTest {
             .verify()
         )
             .isInstanceOf(AssertionError.class)
-            .hasMessageContaining("Query count assertion failed")
-            .hasMessageContaining("QueryType.SELECT: expected 2, but was 1");
+            .hasMessage(
+                """
+                    [Test: soon.springtestutil.querycount.QueryCounterAssertionTest#verifyShouldFailWhenCountsDoNotMatch]Query count assertion failed:
+                    QueryType.SELECT: expected 2, but was 1""");
     }
 
     @Test
@@ -57,7 +61,11 @@ class QueryCounterAssertionTest {
             .insert(1)
             .verify())
             .isInstanceOf(AssertionError.class)
-            .hasMessageContaining("QueryType.INSERT: expected 1, but was 0");
+            .hasMessage(
+                """
+                    [Test: soon.springtestutil.querycount.QueryCounterAssertionTest#verifyShouldDefaultToZeroForUnsetQueryTypes]Query count assertion failed:
+                    QueryType.SELECT: expected 0, but was 1
+                    QueryType.INSERT: expected 1, but was 0""");
     }
 
 }
