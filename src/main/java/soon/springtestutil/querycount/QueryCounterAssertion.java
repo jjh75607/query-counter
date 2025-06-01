@@ -64,7 +64,9 @@ public class QueryCounterAssertion {
 
         if (!errors.isEmpty()) {
             QueryCountContext.clear();
-            throw new AssertionError("Query count assertion failed:\n" + errors);
+
+            String contextInfo = TestContextHolder.getContextInfo();
+            throw new AssertionError(contextInfo + "Query count assertion failed:\n" + errors);
         }
 
         QueryCountContext.clear();

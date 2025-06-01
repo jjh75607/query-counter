@@ -26,8 +26,12 @@ public class QueryCountListener implements QueryExecutionListener {
                     QueryType queryType = queryTypeCache.computeIfAbsent(sql, QueryType::from);
                     QueryCountContext.increment(queryType);
                 } catch (IllegalArgumentException e) {
-                    log.warn("Cannot determine query type for: [{}]. Error: {}", sql,
-                        e.getMessage());
+                    String contextInfo = TestContextHolder.getContextInfo();
+                    log.warn("{}Cannot determine query type for: [{}]. Error: {}",
+                        contextInfo,
+                        sql,
+                        e.getMessage()
+                    );
                 }
             }
         }
