@@ -49,7 +49,7 @@ class QueryCounterAssertionTest {
             .isInstanceOf(AssertionError.class)
             .hasMessage(
                 """
-                    [Test: soon.springtestutil.querycount.QueryCounterAssertionTest#verifyShouldFailWhenCountsDoNotMatch]Query count assertion failed:
+                    [Test: soon.springtestutil.querycount.assertion.QueryCounterAssertionTest#verifyShouldFailWhenCountsDoNotMatch]Query count assertion failed:
                     QueryType.SELECT: expected 2, but was 1""");
     }
 
@@ -66,7 +66,7 @@ class QueryCounterAssertionTest {
             .isInstanceOf(AssertionError.class)
             .hasMessage(
                 """
-                    [Test: soon.springtestutil.querycount.QueryCounterAssertionTest#verifyShouldDefaultToZeroForUnsetQueryTypes]Query count assertion failed:
+                    [Test: soon.springtestutil.querycount.assertion.QueryCounterAssertionTest#verifyShouldDefaultToZeroForUnsetQueryTypes]Query count assertion failed:
                     QueryType.SELECT: expected 0, but was 1
                     QueryType.INSERT: expected 1, but was 0""");
     }
