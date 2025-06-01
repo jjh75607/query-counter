@@ -14,7 +14,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
-import soon.springtestutil.querycount.QueryCountListener;
+import soon.springtestutil.querycount.datasource.QueryCountListener;
 
 /**
  * DataSource 빈을 프록시로 감싸는 BeanPostProcessor입니다.

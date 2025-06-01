@@ -1,7 +1,8 @@
-package soon.springtestutil.querycount;
+package soon.springtestutil.querycount.context;
 
 import java.util.EnumMap;
 import java.util.Map;
+import soon.springtestutil.querycount.QueryType;
 
 /**
  * 현재 스레드에서 실행된 쿼리 유형별 횟수를 저장하고 관리하는 유틸리티 클래스입니다.

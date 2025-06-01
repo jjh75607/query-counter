@@ -1,4 +1,4 @@
-package soon.springtestutil.querycount;
+package soon.springtestutil.querycount.assertion;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -6,6 +6,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import soon.springtestutil.querycount.QueryType;
+import soon.springtestutil.querycount.context.QueryCountContext;
+import soon.springtestutil.querycount.extension.QueryCountTestExtension;
 
 @ExtendWith(QueryCountTestExtension.class)
 class QueryCounterAssertionTest {

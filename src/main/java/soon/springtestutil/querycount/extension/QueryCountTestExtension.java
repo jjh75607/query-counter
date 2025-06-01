@@ -1,8 +1,9 @@
-package soon.springtestutil.querycount;
+package soon.springtestutil.querycount.extension;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import soon.springtestutil.core.context.TestContextHolder;
 
 public class QueryCountTestExtension implements BeforeEachCallback, AfterEachCallback {
 

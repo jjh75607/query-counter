@@ -1,4 +1,4 @@
-package soon.springtestutil.querycount;
+package soon.springtestutil.core.context;
 
 import lombok.Getter;
 
