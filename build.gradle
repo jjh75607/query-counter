@@ -2,15 +2,18 @@ plugins {
     id 'java-library'
     id 'org.springframework.boot' version '3.5.0'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'maven-publish'
 }
 
-group = 'soon'
+group = 'com.github.jjh75607'
 version = '0.0.1-SNAPSHOT'
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
+    withSourcesJar()
+    withJavadocJar()
 }
 
 configurations {
@@ -21,6 +24,19 @@ configurations {
 
 repositories {
     mavenCentral()
+}
+
+wrapper {
+    gradleVersion = "8.13"
+    distributionType = Wrapper.DistributionType.ALL
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
 }
 
 dependencies {
