@@ -53,9 +53,39 @@ class QueryCounterAssertionTest {
                     QueryType.SELECT: expected 2, but was 1""");
     }
 
+    @DisplayName("지정하지 않은 쿼리 타입은 검증하지 않는다.")
     @Test
-    @DisplayName("쿼리 횟수가 설정되지 않은 경우 기본값인 0으로 검증한다.")
-    void verifyShouldDefaultToZeroForUnsetQueryTypes() {
+    void verifyShouldIgnoreUnspecifiedTypes() {
+        // given
+        QueryCountContext.increment(QueryType.SELECT);
+        QueryCountContext.increment(QueryType.INSERT);
+        QueryCountContext.increment(QueryType.INSERT);
+        QueryCountContext.increment(QueryType.UPDATE);
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .select(1)
+            .verify();
+    }
+
+    @DisplayName("여러 타입 중 일부만 지정하면, 지정한 타입만 검증한다.")
+    @Test
+    void verifyShouldCheckOnlySpecifiedTypes() {
+        // given
+        QueryCountContext.increment(QueryType.SELECT);
+        QueryCountContext.increment(QueryType.INSERT);
+        QueryCountContext.increment(QueryType.INSERT);
+        QueryCountContext.increment(QueryType.UPDATE);
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .insert(2)
+            .verify();
+    }
+
+    @Test
+    @DisplayName("지정하지 않은 타입은 무시하고, 지정한 타입만 검증한다.")
+    void verifyShouldOnlyCheckSpecifiedType() {
         // given
         QueryCountContext.increment(QueryType.SELECT);
 
@@ -66,8 +96,7 @@ class QueryCounterAssertionTest {
             .isInstanceOf(AssertionError.class)
             .hasMessage(
                 """
-                    [Test: soon.springtestutil.querycount.assertion.QueryCounterAssertionTest#verifyShouldDefaultToZeroForUnsetQueryTypes]Query count assertion failed:
-                    QueryType.SELECT: expected 0, but was 1
+                    [Test: soon.springtestutil.querycount.assertion.QueryCounterAssertionTest#verifyShouldOnlyCheckSpecifiedType]Query count assertion failed:
                     QueryType.INSERT: expected 1, but was 0""");
     }
 
