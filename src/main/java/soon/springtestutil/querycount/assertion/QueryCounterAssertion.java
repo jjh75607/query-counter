@@ -1,13 +1,12 @@
 package soon.springtestutil.querycount.assertion;
 
-import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import soon.springtestutil.core.context.TestContextHolder;
-import soon.springtestutil.querycount.context.QueryCountContext;
 import soon.springtestutil.querycount.QueryType;
+import soon.springtestutil.querycount.context.QueryCountContext;
 
 public class QueryCounterAssertion {
 
@@ -15,9 +14,6 @@ public class QueryCounterAssertion {
 
     private QueryCounterAssertion() {
         this.expectedCounts = new EnumMap<>(QueryType.class);
-        for (QueryType type : QueryType.values()) {
-            this.expectedCounts.put(type, 0L);
-        }
     }
 
     public static QueryCounterAssertion assertCounts() {
@@ -52,9 +48,9 @@ public class QueryCounterAssertion {
     public void verify() {
         EnumMap<QueryType, Long> actualCounts = QueryCountContext.getQueryCounts();
 
-        String errors = Arrays.stream(QueryType.values())
+        String errors = expectedCounts.keySet().stream()
             .map(type -> {
-                long expected = expectedCounts.getOrDefault(type, 0L);
+                long expected = expectedCounts.get(type);
                 long actual = actualCounts.getOrDefault(type, 0L);
                 if (expected != actual) {
                     return String.format("QueryType.%s: expected %d, but was %d", type, expected,
