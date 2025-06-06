@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'com.github.jjh75607'
-version = '0.0.1-SNAPSHOT'
+version = '0.0.1'
 
 java {
     toolchain {
@@ -68,8 +68,10 @@ dependencies {
 bootJar {
     enabled = false
 }
+
 jar {
     enabled = true
+    archiveClassifier = ''
 }
 
 tasks.named('test') {
