@@ -2,6 +2,7 @@ package soon.springtestutil.querycount.assertion;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,12 +23,13 @@ class QueryCounterAssertionTest {
     @Test
     void verifyShouldPassWhenCountMatch() {
         // given
-        QueryCountContext.increment(QueryType.SELECT);
-        QueryCountContext.increment(QueryType.SELECT);
-        QueryCountContext.increment(QueryType.INSERT);
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')");
 
         // expected
         QueryCounterAssertion.assertCounts()
+            .forTables("member")
             .select(2)
             .insert(1)
             .verify();
@@ -37,8 +39,8 @@ class QueryCounterAssertionTest {
     @Test
     void verifyShouldFailWhenCountsDoNotMatch() {
         // given
-        QueryCountContext.increment(QueryType.SELECT);
-        QueryCountContext.increment(QueryType.INSERT);
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')");
 
         // expected
         assertThatThrownBy(() -> QueryCounterAssertion.assertCounts()
@@ -47,20 +49,17 @@ class QueryCounterAssertionTest {
             .verify()
         )
             .isInstanceOf(AssertionError.class)
-            .hasMessage(
-                """
-                    [Test: soon.springtestutil.querycount.assertion.QueryCounterAssertionTest#verifyShouldFailWhenCountsDoNotMatch]Query count assertion failed:
-                    QueryType.SELECT: expected 2, but was 1""");
+            .hasMessageContaining("QueryType.SELECT: expected 2, but was 1");
     }
 
     @DisplayName("지정하지 않은 쿼리 타입은 검증하지 않는다.")
     @Test
     void verifyShouldIgnoreUnspecifiedTypes() {
         // given
-        QueryCountContext.increment(QueryType.SELECT);
-        QueryCountContext.increment(QueryType.INSERT);
-        QueryCountContext.increment(QueryType.INSERT);
-        QueryCountContext.increment(QueryType.UPDATE);
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (2, 'test2')");
+        QueryCountContext.addQuery(QueryType.UPDATE, "UPDATE member SET name = 'test' WHERE id = 1");
 
         // expected
         QueryCounterAssertion.assertCounts()
@@ -72,10 +71,10 @@ class QueryCounterAssertionTest {
     @Test
     void verifyShouldCheckOnlySpecifiedTypes() {
         // given
-        QueryCountContext.increment(QueryType.SELECT);
-        QueryCountContext.increment(QueryType.INSERT);
-        QueryCountContext.increment(QueryType.INSERT);
-        QueryCountContext.increment(QueryType.UPDATE);
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (2, 'test2')");
+        QueryCountContext.addQuery(QueryType.UPDATE, "UPDATE member SET name = 'test' WHERE id = 1");
 
         // expected
         QueryCounterAssertion.assertCounts()
@@ -87,17 +86,65 @@ class QueryCounterAssertionTest {
     @DisplayName("지정하지 않은 타입은 무시하고, 지정한 타입만 검증한다.")
     void verifyShouldOnlyCheckSpecifiedType() {
         // given
-        QueryCountContext.increment(QueryType.SELECT);
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
 
         // expected
         assertThatThrownBy(() -> QueryCounterAssertion.assertCounts()
             .insert(1)
             .verify())
             .isInstanceOf(AssertionError.class)
-            .hasMessage(
-                """
-                    [Test: soon.springtestutil.querycount.assertion.QueryCounterAssertionTest#verifyShouldOnlyCheckSpecifiedType]Query count assertion failed:
-                    QueryType.INSERT: expected 1, but was 0""");
+            .hasMessageContaining("QueryType.INSERT: expected 1, but was 0");
+    }
+
+    @Test
+    @DisplayName("forTables로 지정된 테이블의 쿼리만 검증한다.")
+    void verifyShouldCheckOnlySpecifiedTables() {
+        // given
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM orders");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')");
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .forTables("member")
+            .select(1)
+            .insert(1)
+            .verify();
+    }
+
+    @Test
+    @DisplayName("forTables로 지정된 테이블의 쿼리만 검증한다.")
+    void verifyShouldCheckOnlySpecifiedTablesWithList() {
+        // given
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM product");
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT m.name, o.order_date FROM member m JOIN orders o ON m.id = o.member_id");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')");
+        QueryCountContext.addQuery(QueryType.UPDATE, "UPDATE product SET name = 'test' WHERE id = 1");
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .forTables(List.of("member", "orders"))
+            .select(2)
+            .insert(1)
+            .verify();
+    }
+
+    @Test
+    @DisplayName("forTables로 지정된 테이블의 쿼리 횟수가 다르면 예외가 발생한다.")
+    void verifyShouldFailWhenCountsDoNotMatchForSpecifiedTables() {
+        // given
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM orders");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')");
+
+        // expected
+        assertThatThrownBy(() -> QueryCounterAssertion.assertCounts()
+            .forTables("member")
+            .select(2)
+            .verify())
+            .isInstanceOf(AssertionError.class)
+            .hasMessageContaining("QueryType.SELECT: expected 2, but was 1");
     }
 
 }
