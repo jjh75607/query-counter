@@ -30,28 +30,30 @@ class QueryCountContextTest {
     }
 
     @Test
-    @DisplayName("쿼리 유형을 증가시키면 해당 유형의 카운트가 증가한다")
-    void incrementOnceShouldUpdateCount() {
+    @DisplayName("쿼리 정보를 추가하면 해당 유형의 카운트가 증가한다")
+    void addQueryOnceShouldUpdateCount() {
         // given
         QueryType queryType = QueryType.SELECT;
+        String query = "SELECT * FROM member";
 
         // when
-        QueryCountContext.increment(queryType);
+        QueryCountContext.addQuery(queryType, query);
         Map<QueryType, Long> counts = QueryCountContext.getQueryCounts();
 
         // then
         assertThat(counts).containsEntry(queryType, 1L);
     }
 
-    @DisplayName("동일한 쿼리 유형을 여러 번 증가시키면 해당 유형의 카운트만 누적된다.")
+    @DisplayName("동일한 쿼리 유형을 여러 번 추가하면 해당 유형의 카운트만 누적된다.")
     @Test
-    void incrementMultipleTimesShouldUpdateCountCorrectly() {
+    void addQueryMultipleTimesShouldUpdateCountCorrectly() {
         // given
         QueryType queryType = QueryType.SELECT;
+        String query = "SELECT * FROM member";
 
         // when
         for (int i = 0; i < 5; i++) {
-            QueryCountContext.increment(queryType);
+            QueryCountContext.addQuery(queryType, query);
         }
 
         // then
@@ -59,32 +61,31 @@ class QueryCountContextTest {
         assertThat(counts).containsEntry(queryType, 5L);
     }
 
-    @DisplayName("다른 쿼리 유형을 증가시키면 해당 유형의 카운트가 별도로 유지된다.")
+    @DisplayName("다른 쿼리 유형을 추가하면 해당 유형의 카운트가 별도로 유지된다.")
     @Test
-    void incrementDifferentQueryTypesShouldMaintainSeparateCounts() {
+    void addQueryDifferentQueryTypesShouldMaintainSeparateCounts() {
         // given
         QueryType selectType = QueryType.SELECT;
+        String selectQuery = "SELECT * FROM member";
         QueryType insertType = QueryType.INSERT;
+        String insertQuery = "INSERT INTO member (id, name) VALUES (1, 'test')";
 
         // when
-        QueryCountContext.increment(selectType);
-        QueryCountContext.increment(insertType);
-        Map<QueryType, Long> counts = QueryCountContext.getQueryCounts();
+        QueryCountContext.addQuery(selectType, selectQuery);
+        QueryCountContext.addQuery(insertType, insertQuery);
 
         // then
+        Map<QueryType, Long> counts = QueryCountContext.getQueryCounts();
         assertThat(counts).containsEntry(selectType, 1L);
         assertThat(counts).containsEntry(insertType, 1L);
     }
 
-    @DisplayName("클리어 호출 시 쿼리 카운트가 초기화 된다.")
+    @DisplayName("쿼리 정보를 초기화하면 모든 카운트가 0이 된다.")
     @Test
-    void clearShouldResetQueryCounts() {
+    void clearShouldResetAllQueries() {
         // given
-        QueryType selectType = QueryType.SELECT;
-        QueryType insertType = QueryType.INSERT;
-
-        QueryCountContext.increment(selectType);
-        QueryCountContext.increment(insertType);
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')");
 
         // when
         QueryCountContext.clear();
@@ -120,8 +121,8 @@ class QueryCountContextTest {
         // when
         executorService.submit(() -> {
             try {
-                QueryCountContext.increment(selectType);
-                QueryCountContext.increment(selectType);
+                QueryCountContext.addQuery(selectType, "SELECT 1");
+                QueryCountContext.addQuery(selectType, "SELECT 2");
                 assertThat(QueryCountContext.getQueryCounts())
                     .isEqualTo(Map.of(selectType, 2L));
             } finally {
@@ -132,9 +133,9 @@ class QueryCountContextTest {
 
         executorService.submit(() -> {
             try {
-                QueryCountContext.increment(insertType);
-                QueryCountContext.increment(updateType);
-                QueryCountContext.increment(insertType);
+                QueryCountContext.addQuery(insertType, "INSERT 1");
+                QueryCountContext.addQuery(updateType, "UPDATE 1");
+                QueryCountContext.addQuery(insertType, "INSERT 2");
                 assertThat(QueryCountContext.getQueryCounts())
                     .isEqualTo(Map.of(insertType, 2L, updateType, 1L));
             } finally {

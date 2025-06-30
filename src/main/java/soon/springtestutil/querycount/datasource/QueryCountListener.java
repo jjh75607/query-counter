@@ -27,7 +27,7 @@ public class QueryCountListener implements QueryExecutionListener {
             if (sql != null && !sql.trim().isEmpty()) {
                 try {
                     QueryType queryType = queryTypeCache.computeIfAbsent(sql, QueryType::from);
-                    QueryCountContext.increment(queryType);
+                    QueryCountContext.addQuery(queryType, sql);
                 } catch (IllegalArgumentException e) {
                     String contextInfo = TestContextHolder.getContextInfo();
                     log.warn("{}Cannot determine query type for: [{}]. Error: {}",
