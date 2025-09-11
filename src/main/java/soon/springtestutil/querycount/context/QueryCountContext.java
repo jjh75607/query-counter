@@ -1,10 +1,11 @@
 package soon.springtestutil.querycount.context;
 
+import soon.springtestutil.querycount.QueryType;
+
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.stream.Collectors;
-import soon.springtestutil.querycount.QueryType;
 
 /**
  * 현재 스레드에서 실행된 쿼리 정보를 저장하고 관리하는 유틸리티 클래스입니다. 이 클래스는 {@link ThreadLocal}을 사용하여 각 스레드별로 쿼리 정보를 격리합니다.
@@ -22,6 +23,11 @@ public final class QueryCountContext {
     public static void addQuery(QueryType queryType, String query) {
         queries.get()
             .add(new QueryInfo(queryType, query));
+    }
+
+    public static void addQuery(QueryType queryType, String query, Long executionTimeMs) {
+        queries.get()
+            .add(new QueryInfo(queryType, query, executionTimeMs));
     }
 
     public static List<QueryInfo> getQueries() {
