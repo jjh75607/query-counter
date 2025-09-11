@@ -1,16 +1,19 @@
 package soon.springtestutil.querycount.context;
 
-import static java.util.concurrent.Executors.newFixedThreadPool;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.EnumMap;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import soon.springtestutil.querycount.QueryType;
+
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+
+import static java.util.concurrent.Executors.newFixedThreadPool;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class QueryCountContextTest {
 
@@ -158,6 +161,27 @@ class QueryCountContextTest {
 
         // then
         assertThat(QueryCountContext.getQueryCounts()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("쿼리를 실행 시간과 함께 추가하면 QueryInfo에 저장된다.")
+    void addQueryWithExecutionTimeShouldStoreExecutionTime() {
+        // given
+        QueryType queryType = QueryType.SELECT;
+        String query = "SELECT * FROM member";
+        long executionTimeMs = 123L;
+
+        // when
+        QueryCountContext.addQuery(queryType, query, executionTimeMs);
+
+        // then
+        List<QueryInfo> queries = QueryCountContext.getQueries();
+        assertThat(queries).hasSize(1)
+            .extracting("queryType", "query", "executionTimeMs")
+            .containsExactly(tuple(queryType, query, executionTimeMs));
+
+        Map<QueryType, Long> counts = QueryCountContext.getQueryCounts();
+        assertThat(counts).containsEntry(queryType, 1L);
     }
 
 }
