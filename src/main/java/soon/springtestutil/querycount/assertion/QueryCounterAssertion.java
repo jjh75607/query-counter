@@ -1,26 +1,20 @@
 package soon.springtestutil.querycount.assertion;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 import soon.springtestutil.core.context.TestContextHolder;
 import soon.springtestutil.querycount.QueryType;
 import soon.springtestutil.querycount.context.QueryCountContext;
 import soon.springtestutil.querycount.context.QueryInfo;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 public class QueryCounterAssertion {
 
-    private final Map<QueryType, Long> expectedCounts;
+    private final Map<QueryType, Long> expectedCounts = new EnumMap<>(QueryType.class);
     private Set<String> tableNames;
+    private Long maxExecutionTimeMs;
 
     private QueryCounterAssertion() {
-        this.expectedCounts = new EnumMap<>(QueryType.class);
     }
 
     public static QueryCounterAssertion assertCounts() {
@@ -28,7 +22,7 @@ public class QueryCounterAssertion {
     }
 
     public QueryCounterAssertion forTables(String... tableNames) {
-        this.tableNames = new HashSet<>(Arrays.asList(tableNames)); // new HashSet
+        this.tableNames = new HashSet<>(Arrays.asList(tableNames));
         return this;
     }
 
@@ -62,6 +56,12 @@ public class QueryCounterAssertion {
         return this;
     }
 
+    // TODO: 현재는 각 쿼리별 측정, 통합 실행 시간 측정 기능 추가
+    public QueryCounterAssertion maxExecutionTimeMs(long maxExecutionTimeMs) {
+        this.maxExecutionTimeMs = maxExecutionTimeMs;
+        return this;
+    }
+
     public void verify() {
         EnumMap<QueryType, Long> actualCounts = getActualCounts();
 
@@ -85,6 +85,30 @@ public class QueryCounterAssertion {
             throw new AssertionError(contextInfo + "Query count assertion failed:\n" + errors);
         }
 
+        if (maxExecutionTimeMs != null) {
+            List<QueryInfo> filtered = getFilteredQueriesForTimeCheck();
+            List<QueryInfo> violations = filtered.stream()
+                .filter(q -> q.getExecutionTimeMs() != null && q.getExecutionTimeMs() > maxExecutionTimeMs)
+                .toList();
+
+            if (!violations.isEmpty()) {
+                QueryInfo first = violations.get(0);
+                String contextInfo = TestContextHolder.getContextInfo();
+                QueryCountContext.clear();
+                String message = String.format(
+                    "%sQuery execution time assertion failed: max=%dms, violations=%d\nFirst violation: %dms > %dms, type=%s\nSQL: %s",
+                    contextInfo,
+                    maxExecutionTimeMs,
+                    violations.size(),
+                    first.getExecutionTimeMs(),
+                    maxExecutionTimeMs,
+                    first.getQueryType(),
+                    first.getQuery()
+                );
+                throw new AssertionError(message);
+            }
+        }
+
         QueryCountContext.clear();
     }
 
@@ -99,6 +123,24 @@ public class QueryCounterAssertion {
                 () -> new EnumMap<>(QueryType.class),
                 Collectors.counting()
             ));
+    }
+
+    private List<QueryInfo> getFilteredQueriesForTimeCheck() {
+        List<QueryInfo> base = QueryCountContext.getQueries();
+        if (tableNames != null && !tableNames.isEmpty()) {
+            base = base.stream()
+                .filter(q -> !Collections.disjoint(q.getTableNames(), tableNames))
+                .collect(Collectors.toList());
+        }
+
+        if (!expectedCounts.isEmpty()) {
+            Set<QueryType> types = expectedCounts.keySet();
+            base = base.stream()
+                .filter(q -> types.contains(q.getQueryType()))
+                .collect(Collectors.toList());
+        }
+
+        return base;
     }
 
 }
