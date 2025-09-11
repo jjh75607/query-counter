@@ -1,12 +1,5 @@
 package soon.springtestutil.querycount.datasource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import net.ttddyy.dsproxy.ExecutionInfo;
 import net.ttddyy.dsproxy.QueryInfo;
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +8,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import soon.springtestutil.querycount.QueryType;
 import soon.springtestutil.querycount.context.QueryCountContext;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 class QueryCountListenerTest {
 
@@ -93,6 +94,25 @@ class QueryCountListenerTest {
         // then
         Map<QueryType, Long> counts = QueryCountContext.getQueryCounts();
         assertThat(counts).containsEntry(QueryType.OTHERS, 1L);
+    }
+
+    @DisplayName("동일한 SQL도 실행시간은 각각 저장된다")
+    @Test
+    void elapsedTimeCapturedIndependentlyForCachedQueryType() {
+        // given
+        given(execInfo.getElapsedTime()).willReturn(10L, 22L);
+        QueryInfo q1 = createMockQueryInfo("SELECT * FROM cache_test");
+        QueryInfo q2 = createMockQueryInfo("SELECT * FROM cache_test");
+
+        // when
+        listener.afterQuery(execInfo, List.of(q1));
+        listener.afterQuery(execInfo, List.of(q2));
+
+        // then
+        var stored = QueryCountContext.getQueries();
+        assertThat(stored).hasSize(2)
+            .extracting("executionTimeMs")
+            .containsExactly(10L, 22L);
     }
 
     private QueryInfo createMockQueryInfo(String sql) {
