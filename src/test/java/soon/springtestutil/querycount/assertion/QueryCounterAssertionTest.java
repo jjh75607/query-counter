@@ -1,8 +1,5 @@
 package soon.springtestutil.querycount.assertion;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,6 +7,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import soon.springtestutil.querycount.QueryType;
 import soon.springtestutil.querycount.context.QueryCountContext;
 import soon.springtestutil.querycount.extension.QueryCountTestExtension;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(QueryCountTestExtension.class)
 class QueryCounterAssertionTest {
@@ -145,6 +146,69 @@ class QueryCounterAssertionTest {
             .verify())
             .isInstanceOf(AssertionError.class)
             .hasMessageContaining("QueryType.SELECT: expected 2, but was 1");
+    }
+
+    @Test
+    @DisplayName("쿼리 실행 시간이 maxExecutionTimeMs 이하이면 통과한다.")
+    void verifyShouldPassWhenExecutionTimeWithinLimit() {
+        // given
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member", 50L);
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')", 80L);
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .maxExecutionTimeMs(100)
+            .select(1)
+            .insert(1)
+            .verify();
+    }
+
+    @Test
+    @DisplayName("쿼리 실행 시간이 maxExecutionTimeMs를 초과하면 예외가 발생한다.")
+    void verifyShouldFailWhenExecutionTimeExceedsLimit() {
+        // given
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member", 150L);
+
+        // expected
+        assertThatThrownBy(() -> QueryCounterAssertion.assertCounts()
+            .maxExecutionTimeMs(100)
+            .select(1)
+            .verify()
+        )
+            .isInstanceOf(AssertionError.class)
+            .hasMessageContaining("Query execution time assertion failed");
+    }
+
+    @Test
+    @DisplayName("실행 시간이 null인 쿼리는 maxExecutionTimeMs 검증에서 무시된다.")
+    void verifyShouldIgnoreQueriesWithoutExecutionTime() {
+        // given
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member");
+        QueryCountContext.addQuery(QueryType.INSERT, "INSERT INTO member (id, name) VALUES (1, 'test')", 50L);
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .maxExecutionTimeMs(100)
+            .select(1)
+            .insert(1)
+            .verify();
+    }
+
+    @Test
+    @DisplayName("forTables로 여러 테이블을 지정하면 해당 모든 테이블의 쿼리가 실행 시간/카운트 검증에 포함된다.")
+    void verifyShouldIncludeExecutionTimeFromAllSpecifiedTables() {
+        // given
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM member", 50L);
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM orders", 60L);
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT m.name, o.id FROM member m JOIN orders o ON m.id = o.member_id", 90L);
+        QueryCountContext.addQuery(QueryType.SELECT, "SELECT * FROM product", 40L); // 필터에서 제외
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .forTables("member", "orders")
+            .maxExecutionTimeMs(100)
+            .select(3)
+            .verify();
     }
 
 }
