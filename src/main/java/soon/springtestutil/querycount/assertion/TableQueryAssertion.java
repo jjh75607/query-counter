@@ -1,5 +1,6 @@
 package soon.springtestutil.querycount.assertion;
 
+import org.springframework.util.StringUtils;
 import soon.springtestutil.querycount.QueryType;
 
 import java.util.EnumMap;
@@ -16,6 +17,12 @@ public class TableQueryAssertion {
     private Long maxExecutionTimeMs;
 
     TableQueryAssertion(QueryCounterAssertion parent, String tableName) {
+        if (parent == null) {
+            throw new IllegalArgumentException("parent must not be null");
+        }
+        if (!StringUtils.hasText(tableName)) {
+            throw new IllegalArgumentException("tableName must not be null or blank");
+        }
         this.parent = parent;
         this.tableName = tableName;
     }
