@@ -103,11 +103,15 @@ class QueryCountVerifier {
                 Collectors.counting()
             ));
 
-        return expected.entrySet().stream()
-            .filter(entry -> !entry.getValue().equals(actualCounts.getOrDefault(entry.getKey(), 0L)))
-            .map(entry -> String.format("Table '%s' - QueryType.%s: expected %d, but was %d",
-                tableName, entry.getKey(), entry.getValue(), actualCounts.getOrDefault(entry.getKey(), 0L)))
-            .collect(Collectors.toList());
+        List<String> errors = new ArrayList<>();
+        for (Map.Entry<QueryType, Long> entry : expected.entrySet()) {
+            long actual = actualCounts.getOrDefault(entry.getKey(), 0L);
+            if (!entry.getValue().equals(actual)) {
+                errors.add(String.format("Table '%s' - QueryType.%s: expected %d, but was %d",
+                    tableName, entry.getKey(), entry.getValue(), actual));
+            }
+        }
+        return errors;
     }
 
     private void verifyExecutionTimes() {
