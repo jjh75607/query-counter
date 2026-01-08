@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
  */
 class QueryCountVerifier {
 
+    private static final int MAX_VIOLATIONS_TO_REPORT = 3;
+
     private final Map<QueryType, Long> expectedCounts;
     private final Map<String, TableQueryAssertion> tableAssertions;
     private final Set<String> tableNames;
@@ -128,7 +130,7 @@ class QueryCountVerifier {
             .toList();
 
         if (!violations.isEmpty()) {
-            errors.add(formatExecutionTimeError(violations.get(0), maxExecutionTimeMs, violations.size(), null));
+            errors.add(formatExecutionTimeError(violations, maxExecutionTimeMs, null));
         }
     }
 
@@ -140,6 +142,8 @@ class QueryCountVerifier {
             }
 
             String tableName = tableAssertion.getTableName();
+
+            // expectedCounts가 비어있으면 해당 테이블의 모든 쿼리 타입을 검사
             Set<QueryType> types = tableAssertion.getExpectedCounts().isEmpty()
                 ? null
                 : tableAssertion.getExpectedCounts().keySet();
@@ -151,26 +155,36 @@ class QueryCountVerifier {
                 .toList();
 
             if (!violations.isEmpty()) {
-                errors.add(formatExecutionTimeError(violations.get(0), tableMaxTime, violations.size(), tableName));
+                errors.add(formatExecutionTimeError(violations, tableMaxTime, tableName));
             }
         }
     }
 
-    private String formatExecutionTimeError(QueryInfo violation, long maxTime, int count, String tableName) {
+    private String formatExecutionTimeError(List<QueryInfo> violations, long maxTime, String tableName) {
         String prefix = tableName != null
             ? String.format("Table '%s' execution time", tableName)
             : "Query execution time";
 
-        return String.format(
-            "%s assertion failed: max=%dms, violations=%d\nFirst violation: %dms > %dms, type=%s\nSQL: %s",
-            prefix,
-            maxTime,
-            count,
-            violation.getExecutionTimeMs(),
-            maxTime,
-            violation.getQueryType(),
-            violation.getQuery()
-        );
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%s assertion failed: max=%dms, violations=%d",
+            prefix, maxTime, violations.size()));
+
+        int reportCount = Math.min(violations.size(), MAX_VIOLATIONS_TO_REPORT);
+        for (int i = 0; i < reportCount; i++) {
+            QueryInfo violation = violations.get(i);
+            sb.append(String.format("\n[%d] %dms > %dms, type=%s, SQL: %s",
+                i + 1,
+                violation.getExecutionTimeMs(),
+                maxTime,
+                violation.getQueryType(),
+                violation.getQuery()));
+        }
+
+        if (violations.size() > MAX_VIOLATIONS_TO_REPORT) {
+            sb.append(String.format("\n... and %d more violations", violations.size() - MAX_VIOLATIONS_TO_REPORT));
+        }
+
+        return sb.toString();
     }
 
     private EnumMap<QueryType, Long> getActualCounts() {
@@ -183,7 +197,7 @@ class QueryCountVerifier {
                 ));
         }
         return cachedQueries.stream()
-            .filter(queryInfo -> !Collections.disjoint(queryInfo.getTableNames(), tableNames))
+            .filter(this::hasTableOverlap)
             .collect(Collectors.groupingBy(
                 QueryInfo::getQueryType,
                 () -> new EnumMap<>(QueryType.class),
@@ -201,9 +215,16 @@ class QueryCountVerifier {
         }
 
         return cachedQueries.stream()
-            .filter(q -> !hasTableFilter || !Collections.disjoint(q.getTableNames(), tableNames))
+            .filter(q -> !hasTableFilter || hasTableOverlap(q))
             .filter(q -> !hasTypeFilter || types.contains(q.getQueryType()))
             .collect(Collectors.toList());
+    }
+
+    /**
+     * 쿼리가 필터링 대상 테이블과 공통 테이블을 가지는지 확인
+     */
+    private boolean hasTableOverlap(QueryInfo queryInfo) {
+        return queryInfo.getTableNames().stream().anyMatch(tableNames::contains);
     }
 
 }
