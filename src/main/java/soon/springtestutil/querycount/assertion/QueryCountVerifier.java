@@ -41,14 +41,13 @@ class QueryCountVerifier {
         if (!errors.isEmpty()) {
             throw new AssertionError(TestContextHolder.getContextInfo() + String.join("\n\n", errors));
         }
-
-        verifyExecutionTimes();
     }
 
     private List<String> collectErrors() {
         List<String> errors = new ArrayList<>();
         verifyQueryCounts(errors);
         verifyTableQueryCounts(errors);
+        collectExecutionTimeErrors(errors);
         return errors;
     }
 
@@ -114,12 +113,12 @@ class QueryCountVerifier {
         return errors;
     }
 
-    private void verifyExecutionTimes() {
-        verifyGlobalExecutionTime();
-        verifyTableExecutionTime();
+    private void collectExecutionTimeErrors(List<String> errors) {
+        collectGlobalExecutionTimeErrors(errors);
+        collectTableExecutionTimeErrors(errors);
     }
 
-    private void verifyGlobalExecutionTime() {
+    private void collectGlobalExecutionTimeErrors(List<String> errors) {
         if (maxExecutionTimeMs == null) {
             return;
         }
@@ -129,12 +128,11 @@ class QueryCountVerifier {
             .toList();
 
         if (!violations.isEmpty()) {
-            throw createExecutionTimeError(violations.get(0), maxExecutionTimeMs, violations.size(), null);
+            errors.add(formatExecutionTimeError(violations.get(0), maxExecutionTimeMs, violations.size(), null));
         }
     }
 
-    private void verifyTableExecutionTime() {
-
+    private void collectTableExecutionTimeErrors(List<String> errors) {
         for (TableQueryAssertion tableAssertion : tableAssertions.values()) {
             Long tableMaxTime = tableAssertion.getMaxExecutionTimeMs();
             if (tableMaxTime == null) {
@@ -153,19 +151,18 @@ class QueryCountVerifier {
                 .toList();
 
             if (!violations.isEmpty()) {
-                throw createExecutionTimeError(violations.get(0), tableMaxTime, violations.size(), tableName);
+                errors.add(formatExecutionTimeError(violations.get(0), tableMaxTime, violations.size(), tableName));
             }
         }
     }
 
-    private AssertionError createExecutionTimeError(QueryInfo violation, long maxTime, int count, String tableName) {
+    private String formatExecutionTimeError(QueryInfo violation, long maxTime, int count, String tableName) {
         String prefix = tableName != null
             ? String.format("Table '%s' execution time", tableName)
             : "Query execution time";
 
-        String message = String.format(
-            "%s%s assertion failed: max=%dms, violations=%d\nFirst violation: %dms > %dms, type=%s\nSQL: %s",
-            TestContextHolder.getContextInfo(),
+        return String.format(
+            "%s assertion failed: max=%dms, violations=%d\nFirst violation: %dms > %dms, type=%s\nSQL: %s",
             prefix,
             maxTime,
             count,
@@ -174,7 +171,6 @@ class QueryCountVerifier {
             violation.getQueryType(),
             violation.getQuery()
         );
-        return new AssertionError(message);
     }
 
     private EnumMap<QueryType, Long> getActualCounts() {
