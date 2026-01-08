@@ -77,6 +77,7 @@ class MemberServiceTest {
 
 | 메서드                              | 설명                                            |
   |----------------------------------|-----------------------------------------------|
+| `forTable(String table)`         | 특정 테이블에 대한 쿼리 검증 조건을 개별 설정합니다. 체이닝으로 여러 테이블에 각각 다른 조건 설정 가능 |
 | `forTables(String... tables)`    | 검증할 테이블 이름을 지정합니다. 지정하지 않으면 모든 테이블 쿼리를 검증합니다. |
 | `forTables(List<String> tables)` | 리스트 형태로 검증할 테이블 이름 지정                         |
 | `select(int expected)`           | SELECT 쿼리 실행 횟수 검증                            |
@@ -129,6 +130,42 @@ void updateOrderWithExecutionTimeCheck() {
         .verify();
 }
 
+@Test
+void verifyQueryCountPerTable() {
+    // given
+    Member member = new Member("test");
+    memberRepository.save(member);
+
+    Product product = new Product("item", 1000);
+    productRepository.save(product);
+
+    // when
+    memberService.getMember(member.getId());
+    productService.getProducts();
+
+    // then - 테이블별로 각각 다른 쿼리 수 검증
+    QueryCounterAssertion.assertCounts()
+        .forTable("member").insert(1).select(1)
+        .forTable("product").insert(1).select(1)
+        .verify();
+}
+
+@Test
+void verifyQueryCountPerTableWithExecutionTime() {
+    // given
+    Member member = new Member("test");
+    memberRepository.save(member);
+
+    // when
+    memberService.getMember(member.getId());
+
+    // then - 테이블별 쿼리 수 + 실행 시간 검증
+    QueryCounterAssertion.assertCounts()
+        .forTable("member").insert(1).select(1).maxExecutionTimeMs(100)
+        .forTable("orders").select(2).maxExecutionTimeMs(200)
+        .verify();
+}
+
 ```
 
 ### 예외처리
@@ -144,8 +181,20 @@ QueryType.SELECT: expected 3, but was 2
 ```
 
 ``` text
+java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}] Table-specific query count assertion failed:
+Table 'member' - QueryType.SELECT: expected 2, but was 1
+```
+
+``` text
 java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}]
 Query execution time assertion failed: max=100ms, violations=1
+First violation: 120ms > 100ms, type=SELECT
+SQL: SELECT * FROM member
+```
+
+``` text
+java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}]
+Table 'member' execution time assertion failed: max=100ms, violations=1
 First violation: 120ms > 100ms, type=SELECT
 SQL: SELECT * FROM member
 ```
