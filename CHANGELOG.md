@@ -6,6 +6,14 @@
 
 ---
 
+## [0.0.6] - 2026-01-08
+### Added
+- 테이블별 개별 쿼리 카운트 검증 기능 추가 (`forTable`)
+    - `forTable("member").insert(2).select(1)` 형태로 테이블마다 다른 검증 조건 설정 가능
+    - 여러 테이블에 대해 체이닝으로 각각 다른 조건 설정 가능
+    - 테이블별 `maxExecutionTimeMs` 설정 지원
+- `TableQueryAssertion` 클래스 추가
+
 ## [0.0.5] - 2025-09-11
 ### Added
 - 개별 쿼리 실행 시간(`maxExecutionTimeMs`)을 지정하여 시간 초과 쿼리에 대해 검증할 수 있는 기능 추가

@@ -1,8 +1,5 @@
 package soon.springtestutil.core.context;
 
-import lombok.Getter;
-
-@Getter
 public class TestContextHolder {
 
     private static final ThreadLocal<String> testClassNameHolder = new ThreadLocal<>();
@@ -18,10 +15,10 @@ public class TestContextHolder {
         String methodName = testMethodNameHolder.get();
 
         if (className != null && methodName != null) {
-            return String.format("[Test: %s#%s]", className, methodName);
+            return String.format("[Test: %s#%s] ", className, methodName);
         }
 
-        return "[Test: Unknown]";
+        return "";
     }
 
     public static void clearContext() {

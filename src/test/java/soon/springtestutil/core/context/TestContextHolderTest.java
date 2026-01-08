@@ -1,13 +1,14 @@
 package soon.springtestutil.core.context;
 
-import static java.util.concurrent.Executors.newFixedThreadPool;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+
+import static java.util.concurrent.Executors.newFixedThreadPool;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class TestContextHolderTest {
 
@@ -22,7 +23,7 @@ class TestContextHolderTest {
         // given
         String className = "com.example.TestContextHolderTest";
         String methodName = "contextInfoSelected";
-        String expected = "[Test: %s#%s]".formatted(className, methodName);
+        String expected = "[Test: %s#%s] ".formatted(className, methodName);
 
         // when
         TestContextHolder.setContext(className, methodName);
@@ -33,15 +34,15 @@ class TestContextHolderTest {
             .isEqualTo(expected);
     }
 
-    @DisplayName("컨텍스트 정보가 설정되지 않은 경우 Unknown이 반환된다.")
+    @DisplayName("컨텍스트 정보가 설정되지 않은 경우 빈 문자열이 반환된다.")
     @Test
-    void contextInfoReturnsUnknownWhenNotSet() {
+    void contextInfoReturnsEmptyWhenNotSet() {
         // given
         String contextInfo = TestContextHolder.getContextInfo();
 
         // expected
         assertThat(contextInfo)
-            .isEqualTo("[Test: Unknown]");
+            .isEmpty();
     }
 
     @DisplayName("여러 스레드에서 컨텍스트 정보는 격리된다.")
@@ -63,7 +64,7 @@ class TestContextHolderTest {
                 String contextInfo = TestContextHolder.getContextInfo();
 
                 assertThat(contextInfo)
-                    .isEqualTo("[Test: %s#%s]".formatted(thread1ClassName, thread1MethodName));
+                    .isEqualTo("[Test: %s#%s] ".formatted(thread1ClassName, thread1MethodName));
             } finally {
                 latch.countDown();
             }
@@ -75,7 +76,7 @@ class TestContextHolderTest {
                 String contextInfo = TestContextHolder.getContextInfo();
 
                 assertThat(contextInfo)
-                    .isEqualTo("[Test: %s#%s]".formatted(thread2ClassName, thread2MethodName));
+                    .isEqualTo("[Test: %s#%s] ".formatted(thread2ClassName, thread2MethodName));
             } finally {
                 latch.countDown();
             }
@@ -85,7 +86,7 @@ class TestContextHolderTest {
         executorService.shutdown();
 
         assertThat(TestContextHolder.getContextInfo())
-            .isEqualTo("[Test: Unknown]");
+            .isEmpty();
     }
 
 }
