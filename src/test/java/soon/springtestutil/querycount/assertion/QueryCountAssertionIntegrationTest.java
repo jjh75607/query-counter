@@ -12,7 +12,12 @@ import soon.springtestutil.config.AutoConfig;
 import soon.springtestutil.querycount.context.QueryCountContext;
 import soon.springtestutil.querycount.extension.QueryCountTestExtension;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 @EnableAutoConfiguration
 @SpringBootTest(classes = AutoConfig.class, properties = "query-counter.enabled=true")
@@ -46,6 +51,40 @@ public class QueryCountAssertionIntegrationTest {
             .isInstanceOf(AssertionError.class)
             .hasMessageContaining("Query execution time assertion failed")
             .hasMessageContaining("violations=");
+    }
+
+    /**
+     * quick-perf 에는 실행 시간 경고 메시지가 설정한 값 대신 항상 {@code 0 ms} 로 찍히던
+     * 결함이 있었다(quick-perf/quickperf#93). 같은 datasource-proxy 위에서 도는
+     * 라이브러리라 확인이 필요했고, 여기서는 설정값과 실측값이 모두 메시지에 들어간다.
+     * 이 테스트는 그 성질을 지킨다.
+     */
+    @Test
+    @DisplayName("실행 시간 위반 메시지에 설정한 상한과 실제 측정값이 함께 들어간다")
+    void executionTimeMessageCarriesConfiguredMaxAndMeasuredTime() {
+        // given
+        jdbcTemplate.execute("CALL SLEEP(120)");
+
+        // when
+        AssertionError error = catchThrowableOfType(
+            () -> QueryCounterAssertion.assertCounts()
+                .maxExecutionTimeMs(50)
+                .verify(),
+            AssertionError.class
+        );
+
+        // then
+        assertThat(error).hasMessageContaining("max=50ms");
+        assertThat(error.getMessage())
+            .as("실측값이 0 으로 찍히지 않고 상한을 넘은 실제 시간이 들어가야 한다")
+            .containsPattern("\\[1] (\\d+)ms > 50ms");
+        assertThat(measuredMsIn(error.getMessage())).isGreaterThan(50L);
+    }
+
+    private long measuredMsIn(String message) {
+        Matcher matcher = Pattern.compile("\\[1] (\\d+)ms > 50ms").matcher(message);
+        assertThat(matcher.find()).isTrue();
+        return Long.parseLong(matcher.group(1));
     }
 
     @Test
