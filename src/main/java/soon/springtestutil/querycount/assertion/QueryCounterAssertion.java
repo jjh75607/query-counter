@@ -18,9 +18,19 @@ import java.util.*;
  *     .verify();
  * }</pre>
  *
+ * <p>Calling {@link #verify()} is optional. An assertion that is created but never
+ * verified is checked automatically once the test method finishes, so a forgotten
+ * {@code verify()} can never make a test pass silently.
+ *
  * <p>Requires {@code query-counter.enabled=true} in the test configuration.
  */
 public class QueryCounterAssertion {
+
+    /**
+     * Assertions created on this thread that have not been verified yet.
+     */
+    private static final ThreadLocal<List<QueryCounterAssertion>> pending =
+        ThreadLocal.withInitial(ArrayList::new);
 
     private final Map<QueryType, Long> expectedCounts = new EnumMap<>(QueryType.class);
     private final Map<String, TableQueryAssertion> tableAssertions = new LinkedHashMap<>();
@@ -31,7 +41,9 @@ public class QueryCounterAssertion {
     }
 
     public static QueryCounterAssertion assertCounts() {
-        return new QueryCounterAssertion();
+        QueryCounterAssertion assertion = new QueryCounterAssertion();
+        pending.get().add(assertion);
+        return assertion;
     }
 
     /**
@@ -96,16 +108,53 @@ public class QueryCounterAssertion {
 
     public void verify() {
         try {
-            QueryCountVerifier verifier = new QueryCountVerifier(
-                expectedCounts,
-                tableAssertions,
-                tableNames,
-                maxExecutionTimeMs
-            );
-            verifier.verify();
+            doVerify();
         } finally {
             QueryCountContext.clear();
         }
+    }
+
+    /**
+     * Verifies every assertion that was created but never verified, then clears the
+     * recorded queries. Called automatically after each test method.
+     *
+     * <p>All remaining assertions are checked before the recorded queries are cleared,
+     * so having several unverified assertions still reports each of them correctly.
+     */
+    public static void verifyPending() {
+        List<QueryCounterAssertion> remaining = new ArrayList<>(pending.get());
+        pending.remove();
+
+        if (remaining.isEmpty()) {
+            return;
+        }
+
+        try {
+            for (QueryCounterAssertion assertion : remaining) {
+                assertion.doVerify();
+            }
+        } finally {
+            QueryCountContext.clear();
+        }
+    }
+
+    /**
+     * Discards assertions left over from a previous test on this thread.
+     */
+    public static void clearPending() {
+        pending.remove();
+    }
+
+    private void doVerify() {
+        pending.get().remove(this);
+
+        QueryCountVerifier verifier = new QueryCountVerifier(
+            expectedCounts,
+            tableAssertions,
+            tableNames,
+            maxExecutionTimeMs
+        );
+        verifier.verify();
     }
 
 }

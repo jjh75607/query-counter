@@ -55,6 +55,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
+    // Spring TestContext. TestExecutionListener 등록에 필요하다.
+    // 이 라이브러리를 쓰는 쪽은 이미 테스트 클래스패스에 갖고 있다.
+    api 'org.springframework:spring-test'
+
     // datasource-proxy
     implementation 'net.ttddyy:datasource-proxy:1.10.1'
 

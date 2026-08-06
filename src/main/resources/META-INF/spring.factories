@@ -1,0 +1,4 @@
+# Picked up by Spring's TestContextBootstrapper, so query-counter works in every Spring
+# test without @ExtendWith. See QueryCountTestExecutionListener for what it does.
+org.springframework.test.context.TestExecutionListener = \
+  soon.springtestutil.querycount.extension.QueryCountTestExecutionListener
