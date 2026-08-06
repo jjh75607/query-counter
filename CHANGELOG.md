@@ -15,6 +15,7 @@
 - Spotless 로 포맷 검사. 사용하지 않는 import 제거, 뒤 공백 제거, 파일 끝 개행, 들여쓰기 4칸 스페이스만 검사하는 설정입니다. `spotlessCheck` 가 `check` 에 물려 있어 `./gradlew build` 와 CI 가 함께 검사합니다. 라이브러리 동작에는 영향이 없습니다
 
 ### Fixed
+- **DataSource 에 의존하는 다른 `BeanPostProcessor` 가 있으면 쿼리가 하나도 기록되지 않던 문제를 고쳤습니다.** `Ordered` 를 구현하면서 DataSource 를 주입받는 `BeanPostProcessor` 가 있으면 그것을 만드는 과정에서 DataSource 가 먼저 만들어져 감싸지지 않았습니다. 이 라이브러리의 `BeanPostProcessor` 가 `PriorityOrdered` 를 구현하도록 바꿔 항상 먼저 등록되게 했습니다. 증상이 카운트 불일치가 아니라 0건이었고 안내 문구도 원인과 어긋나 있어 찾기 어려운 문제였습니다
 - 자동 설정 테스트가 Spring Boot 의 `DataSourceAutoConfiguration` 에 묶여 있어 Spring Boot 4 에서 컴파일되지 않았습니다. 테스트용 DataSource 를 직접 등록하도록 바꿔 버전에 묶이지 않게 했습니다. 라이브러리 본체는 4.x 에서 원래 정상이었습니다
 - 문서에 셋업 쿼리도 카운트에 포함된다는 설명을 추가했습니다. 기록은 테스트 메서드 직전에 초기화되므로 `@BeforeEach` 의 쿼리가 함께 세집니다
 
