@@ -19,6 +19,8 @@ jobs:
         include:
           - spring-boot: ''        # build.gradle 의 기본값
           - spring-boot: '3.0.0'   # 지원하는 하한
+          - spring-boot: '3.5.16'  # 3.x 최신
+          - spring-boot: '4.1.0'   # 4.x 최신
 
     steps:
       - name: Checkout
