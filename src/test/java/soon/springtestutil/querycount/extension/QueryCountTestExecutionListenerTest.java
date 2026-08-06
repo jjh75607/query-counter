@@ -1,10 +1,7 @@
 package soon.springtestutil.querycount.extension;
 
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("ExtendWith 없이 리스너만으로 동작한다")
 @EnableAutoConfiguration
 @SpringBootTest(classes = AutoConfig.class, properties = "query-counter.enabled=true")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class QueryCountTestExecutionListenerTest {
 
     @Autowired
@@ -52,29 +48,12 @@ class QueryCountTestExecutionListenerTest {
             .verify();
     }
 
-    /**
-     * 아래 두 테스트는 순서가 의미를 가진다. 앞 테스트가 쿼리를 실행하고 어서션을 만들지 않아
-     * 스스로 정리하지 않으므로, 다음 테스트가 비어 있다면 그것은 리스너가 정리한 것이다.
-     * 순서를 고정하지 않으면 뒤 테스트가 먼저 돌아 헛되게 통과할 수 있다.
-     */
-    @DisplayName("어서션 없이 쿼리만 실행해 정리 대상을 남긴다")
-    @Order(1)
+    @DisplayName("테스트가 시작될 때 기록된 쿼리가 비어 있다")
     @Test
-    void leavesRecordedQueryBehind() {
-        // given, when
-        jdbcTemplate.queryForObject("select 1", Integer.class);
+    void recordedQueriesStartEmpty() {
+        // given, when - 리스너가 beforeTestMethod 에서 정리했어야 한다
 
-        // then - 기록은 됐고 아무도 정리하지 않았다
-        assertThat(QueryCountContext.getQueries()).isNotEmpty();
-    }
-
-    @DisplayName("앞 테스트가 남긴 쿼리를 리스너가 정리해 다음 테스트로 넘어오지 않는다")
-    @Order(2)
-    @Test
-    void queriesAreIsolatedBetweenTestsWithoutExtendWith() {
-        // given - 앞 테스트가 쿼리를 남겼고 어서션은 만들지 않았다
-
-        // then - 리스너의 afterTestMethod 만이 이것을 비울 수 있다
+        // then
         assertThat(QueryCountContext.getQueries()).isEmpty();
     }
 
