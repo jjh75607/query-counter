@@ -1,6 +1,6 @@
-# spring-test-util
+# query-counter
 
-[![JitPack](https://jitpack.io/v/jjh75607/spring-test-util.svg)](https://jitpack.io/#jjh75607/spring-test-util)
+[![JitPack](https://jitpack.io/v/jjh75607/query-counter.svg)](https://jitpack.io/#jjh75607/query-counter)
 
 ***
 > Hibernate를 통해 실행되는 쿼리의 수와 실행 시간을 검증할 수 있는 테스트 라이브러리
@@ -37,7 +37,7 @@ repositories {
 
 dependencies {
     // 최신 버전은 상단의 JitPack 배지 참고
-    testImplementation("com.github.jjh75607:spring-test-util:v0.0.5")
+    testImplementation("com.github.jjh75607:query-counter:v0.0.6")
 }
 ```
 
