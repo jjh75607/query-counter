@@ -10,8 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -26,8 +24,7 @@ class QueryLoggingTest {
     private ListAppender<ILoggingEvent> appender;
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-        .withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class))
-        .withUserConfiguration(AutoConfig.class);
+        .withUserConfiguration(TestDataSourceConfig.class, AutoConfig.class);
 
     @BeforeEach
     void attachAppender() {

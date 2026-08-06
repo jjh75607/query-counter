@@ -3,8 +3,6 @@ package soon.springtestutil.config;
 import net.ttddyy.dsproxy.support.ProxyDataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import javax.sql.DataSource;
@@ -15,8 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AutoConfigTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-        .withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class))
-        .withUserConfiguration(AutoConfig.class);
+        .withUserConfiguration(TestDataSourceConfig.class, AutoConfig.class);
 
     @DisplayName("프로퍼티를 지정하지 않으면 자동 설정이 적용되지 않고 DataSource도 감싸지지 않는다")
     @Test

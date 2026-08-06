@@ -28,9 +28,17 @@ repositories {
     mavenCentral()
 }
 
+// CI 에서 -PspringBootVersion 으로 지원 범위를 검증한다. 지정하지 않으면 플러그인 기본값을 쓴다.
+def springBootVersion = findProperty('springBootVersion')
+
 dependencyManagement {
     imports {
-        mavenBom SpringBootPlugin.BOM_COORDINATES
+        if (springBootVersion) {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+        }
+        else {
+            mavenBom SpringBootPlugin.BOM_COORDINATES
+        }
     }
 }
 
