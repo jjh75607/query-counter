@@ -35,12 +35,24 @@ class QueryCountVerifier {
         this.maxExecutionTimeMs = maxExecutionTimeMs;
     }
 
+    /**
+     * 기록된 쿼리가 하나도 없는데 검증이 실패했을 때 덧붙이는 안내입니다.
+     *
+     * <p>대개 {@code query-counter.enabled=true}를 설정하지 않아 DataSource가 감싸지지 않은
+     * 경우입니다. 원인을 알기 어려운 실패라 힌트를 남깁니다.
+     */
+    static final String NO_QUERY_RECORDED_HINT =
+        "No query was recorded. Is query-counter.enabled=true set in your test configuration?";
+
     void verify() {
         this.cachedQueries = QueryCountContext.getQueries();
 
         List<String> errors = collectErrors();
 
         if (!errors.isEmpty()) {
+            if (this.cachedQueries.isEmpty()) {
+                errors.add(NO_QUERY_RECORDED_HINT);
+            }
             throw new AssertionError(TestContextHolder.getContextInfo() + String.join("\n\n", errors));
         }
     }

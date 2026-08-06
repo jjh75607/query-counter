@@ -83,13 +83,6 @@ public class QueryCounterAssertion {
     }
 
     public void verify() {
-        if (!QueryCountContext.isActive()) {
-            throw new IllegalStateException(
-                "query-counter is disabled. "
-                    + "Set query-counter.enabled=true in your test configuration."
-            );
-        }
-
         try {
             QueryCountVerifier verifier = new QueryCountVerifier(
                 expectedCounts,

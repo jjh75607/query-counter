@@ -11,7 +11,6 @@ import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.util.ReflectionUtils;
-import soon.springtestutil.querycount.context.QueryCountContext;
 import soon.springtestutil.querycount.datasource.QueryCountListener;
 
 import javax.sql.DataSource;
@@ -32,7 +31,6 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor {
 
     public DataSourceProxyBeanPostProcessor(boolean loggingEnabled) {
         this.loggingEnabled = loggingEnabled;
-        QueryCountContext.markActive();
     }
 
     @Override
