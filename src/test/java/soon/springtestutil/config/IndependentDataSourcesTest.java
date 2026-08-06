@@ -5,8 +5,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -29,7 +27,6 @@ import javax.sql.DataSource;
  * 나온다.
  */
 @DisplayName("서로 위임하지 않는 DataSource 빈이 둘일 때")
-@EnableAutoConfiguration(exclude = DataSourceAutoConfiguration.class)
 @SpringBootTest(
     classes = {AutoConfig.class, IndependentDataSourcesTest.TwoDataSourcesConfig.class},
     properties = "query-counter.enabled=true"
@@ -56,6 +53,11 @@ class IndependentDataSourcesTest {
                 .build();
         }
 
+        /**
+         * JdbcTemplate 을 직접 등록한다. Spring Boot 의 자동 설정을 쓰면
+         * {@code DataSourceAutoConfiguration} 을 제외해야 하는데, 그 클래스는 Spring Boot 4
+         * 에서 패키지가 옮겨져 버전에 묶인다.
+         */
         @Bean
         @Primary
         JdbcTemplate firstJdbcTemplate(@Qualifier("firstDataSource") DataSource dataSource) {
