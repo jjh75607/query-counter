@@ -12,7 +12,7 @@ public enum QueryType {
     INSERT("INSERT"),
     UPDATE("UPDATE"),
     DELETE("DELETE"),
-    OTHERS("OTHERS"); // OTHERS는 알 수 없는 쿼리 유형을 나타냅니다.
+    OTHERS("OTHERS"); // Any statement that is not one of the four above.
 
     private final String keyword;
 

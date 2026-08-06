@@ -7,7 +7,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * 특정 테이블에 대한 쿼리 카운트 검증 조건을 저장하는 클래스입니다.
+ * Holds the assertions declared for a single table.
  */
 public class TableQueryAssertion {
 
@@ -58,21 +58,21 @@ public class TableQueryAssertion {
     }
 
     /**
-     * 다른 테이블에 대한 검증 조건을 추가합니다.
+     * Starts assertions for another table.
      */
     public TableQueryAssertion forTable(String tableName) {
         return parent.forTable(tableName);
     }
 
     /**
-     * 여러 테이블에 대한 통합 검증 조건을 추가합니다.
+     * Restricts the assertion to the given tables, counting them together.
      */
     public QueryCounterAssertion forTables(String... tableNames) {
         return parent.forTables(tableNames);
     }
 
     /**
-     * 모든 검증을 수행합니다.
+     * Runs every assertion declared so far and reports all mismatches at once.
      */
     public void verify() {
         parent.verify();

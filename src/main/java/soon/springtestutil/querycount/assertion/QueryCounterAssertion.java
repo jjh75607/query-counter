@@ -6,7 +6,19 @@ import soon.springtestutil.querycount.context.QueryCountContext;
 import java.util.*;
 
 /**
- * 쿼리 카운트 검증을 위한 빌더 클래스
+ * Builder for asserting the number of queries executed during a test.
+ *
+ * <p>Expected counts are plain {@code long} values, so they can be computed at runtime.
+ * This makes it possible to express expectations that depend on test data.
+ *
+ * <pre>{@code
+ * QueryCounterAssertion.assertCounts()
+ *     .select(1)
+ *     .insert(members.size())
+ *     .verify();
+ * }</pre>
+ *
+ * <p>Requires {@code query-counter.enabled=true} in the test configuration.
  */
 public class QueryCounterAssertion {
 
@@ -23,8 +35,8 @@ public class QueryCounterAssertion {
     }
 
     /**
-     * 특정 테이블에 대한 쿼리 카운트 검증 조건을 설정합니다.
-     * 체이닝을 통해 여러 테이블에 대해 각각 다른 검증 조건을 설정할 수 있습니다.
+     * Sets assertions for a single table. Chain this call to assert different
+     * expectations for several tables.
      *
      * <pre>{@code
      * QueryCounterAssertion.assertCounts()
@@ -39,8 +51,8 @@ public class QueryCounterAssertion {
     }
 
     /**
-     * 여러 테이블에 대한 통합 쿼리 카운트 검증 조건을 설정합니다.
-     * 지정된 모든 테이블에서 발생한 쿼리의 총 합계를 검증합니다.
+     * Restricts the assertion to the given tables. Queries touching any of them are
+     * counted together. When not specified, queries against every table are counted.
      */
     public QueryCounterAssertion forTables(String... tableNames) {
         this.tableNames = new HashSet<>(Arrays.asList(tableNames));
