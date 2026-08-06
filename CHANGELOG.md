@@ -6,6 +6,13 @@
 
 ---
 
+## [Unreleased]
+### Added
+- 돌아가는 예제 패키지. `src/test/java/soon/springtestutil/example` 에 JPA 엔티티와 사용 예제 테스트를 두어 README 예제가 실제로 컴파일되고 실행되는지 검증합니다
+
+### Fixed
+- 문서에 셋업 쿼리도 카운트에 포함된다는 설명을 추가했습니다. 기록은 테스트 메서드 직전에 초기화되므로 `@BeforeEach` 의 쿼리가 함께 세집니다
+
 ## [0.1.0] - 2026-08-06
 ### Added
 - `@ExtendWith(QueryCountTestExtension.class)` 없이도 동작합니다. `TestExecutionListener` 를 `META-INF/spring.factories` 에 등록해 모든 Spring 테스트가 자동으로 집어갑니다

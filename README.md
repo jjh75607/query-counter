@@ -112,6 +112,17 @@ If your test does not load a Spring test context, add
 `@ExtendWith(QueryCountTestExtension.class)` so that recorded queries are still isolated between
 tests. Spring tests do not need it.
 
+### Runnable examples
+
+Every example below is also a real test in
+[`src/test/java/soon/springtestutil/example`](src/test/java/soon/springtestutil/example),
+so it compiles and runs with `./gradlew build`. That package uses JPA entities and shows an
+N+1 problem appearing and then disappearing after a `join fetch`.
+
+**Setup queries are counted too.** The recording is reset just before the test method starts, so
+queries issued in `@BeforeEach` or in the `given` block are included. Call
+`QueryCountContext.clear()` after your setup if you want to count only what the `when` block does.
+
 ### API
 
 ##### Methods
