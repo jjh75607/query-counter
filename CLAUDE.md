@@ -94,6 +94,7 @@ PR 본문에 배경과 판단을 적으면 이슈에 같은 내용을 한 번 �
 | Type | `Feat`, `Fix`, `Docs`, `Refactor`, `Chore`, `Setting`, `Test` |
 | 머지 | 스쿼시. 제목에 ` (#PR번호)`가 붙는다 |
 | 이슈 본문 | 이슈를 만들 때는 `.github/ISSUE_TEMPLATE/` 의 타입별 템플릿 |
+| 라벨 | 타입 라벨(`Feat`, `Fix` 등)은 두지 않는다. 제목 접두사와 같은 말이라 정보가 없었다. GitHub 기본 라벨만 남겼고 템플릿이 자동으로 붙이지 않는다. 붙일지는 그때 판단한다 |
 | PR 본문 | `.github/PULL_REQUEST_TEMPLATE.md` |
 
 ## 문서
