@@ -5,6 +5,7 @@ plugins {
     id 'org.springframework.boot' version '3.5.0'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'maven-publish'
+    id 'com.diffplug.spotless' version '8.9.0'
 }
 
 group = 'com.github.jjh75607'
@@ -39,6 +40,18 @@ dependencyManagement {
         else {
             mavenBom SpringBootPlugin.BOM_COORDINATES
         }
+    }
+}
+
+// 지금 스타일을 고정하는 것이 목적이다. 재포맷하지 않는다.
+// spring-javaformat 은 들여쓰기가 탭이라 저장소 전체가 바뀌므로 쓰지 않는다.
+// import 순서는 이미 일관적이라 규칙을 걸지 않는다. 필요해지면 그때 추가한다.
+spotless {
+    java {
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+        leadingTabsToSpaces(4)
     }
 }
 

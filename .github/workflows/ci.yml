@@ -41,6 +41,8 @@ jobs:
 
       # test 가 아니라 build 를 돌린다. 라이브러리라서 jar, sources jar,
       # javadoc jar 생성과 javadoc 컴파일까지 검증해야 한다.
+      # Spotless 의 spotlessCheck 는 check 에 물려 있어 이 단계에 포함된다.
+      # 별도 단계를 두지 않는 이유는 로컬 ./gradlew build 도 같은 검사를 받게 하기 위해서다.
       - name: Build
         run: |
           if [ -n "${{ matrix.spring-boot }}" ]; then
