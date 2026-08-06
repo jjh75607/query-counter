@@ -7,6 +7,14 @@
 ---
 
 ## [Unreleased]
+### Added
+- `@ExtendWith(QueryCountTestExtension.class)` 없이도 동작합니다. `TestExecutionListener` 를 `META-INF/spring.factories` 에 등록해 모든 Spring 테스트가 자동으로 집어갑니다
+    - 사용자 쪽 설정이 필요 없습니다
+    - Spring 테스트 컨텍스트를 띄우지 않는 테스트에서는 기존처럼 `@ExtendWith` 를 씁니다
+- **`verify()` 가 선택이 되었습니다.** 만들어두고 검증하지 않은 어서션은 테스트가 끝날 때 자동으로 검증됩니다
+    - 이전에는 `verify()` 를 잊으면 테스트가 조용히 통과했습니다
+    - 테스트가 다른 이유로 이미 실패했으면 자동 검증을 건너뜁니다. 원래 실패 원인이 가려지지 않습니다
+
 ### Changed
 - **활성화 방식이 바뀌었습니다.** 의존성만 추가하면 켜지던 것이 `query-counter.enabled=true` 를 설정해야 켜지도록 변경
     - 활성화하지 않으면 DataSource 를 감싸지 않으므로 이 라이브러리를 쓰지 않는 테스트에 영향을 주지 않습니다
