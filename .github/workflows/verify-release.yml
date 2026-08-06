@@ -1,0 +1,69 @@
+name: Verify Release
+
+# JitPack 은 배포받는 것이 아니라 요청받을 때 태그를 클론해 빌드한다.
+# 그래서 아무도 요청하지 않으면 릴리스가 깨진 것을 아무도 모른다.
+# 릴리스 직후 한 번 요청해 빌드가 되는지 확인한다.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '검증할 태그 (예: v0.1.0)'
+        required: true
+
+jobs:
+  verify-jitpack:
+    name: Verify JitPack artifact
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: echo "value=${{ github.event.inputs.tag || github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+
+      # 첫 요청이 빌드를 트리거하므로 넉넉한 타임아웃을 준다.
+      - name: Request POM to trigger the build
+        run: |
+          TAG='${{ steps.tag.outputs.value }}'
+          BASE="https://jitpack.io/com/github/${{ github.repository_owner }}/query-counter/$TAG"
+          echo "요청: $BASE/query-counter-$TAG.pom"
+          curl -sS -f --max-time 600 -o pom.xml "$BASE/query-counter-$TAG.pom"
+
+      - name: Check POM coordinates
+        run: |
+          TAG='${{ steps.tag.outputs.value }}'
+          grep -q "<artifactId>query-counter</artifactId>" pom.xml \
+            || { echo "artifactId 가 query-counter 가 아니다"; cat pom.xml; exit 1; }
+          grep -q "<version>$TAG</version>" pom.xml \
+            || { echo "version 이 $TAG 가 아니다"; cat pom.xml; exit 1; }
+
+      - name: Download the jar
+        run: |
+          TAG='${{ steps.tag.outputs.value }}'
+          BASE="https://jitpack.io/com/github/${{ github.repository_owner }}/query-counter/$TAG"
+          curl -sS -f --max-time 600 -o library.jar "$BASE/query-counter-$TAG.jar"
+          test -s library.jar || { echo "jar 가 비어 있다"; exit 1; }
+
+      # 자동 설정과 리스너 등록 파일이 빠지면 라이브러리가 조용히 아무것도 하지 않는다.
+      - name: Check the jar contains the wiring files
+        run: |
+          unzip -l library.jar > listing.txt
+          for entry in \
+            "META-INF/spring.factories" \
+            "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports" \
+            "META-INF/spring-configuration-metadata.json"
+          do
+            grep -q "$entry" listing.txt || { echo "빠짐: $entry"; cat listing.txt; exit 1; }
+          done
+
+      - name: Check the build status reported by JitPack
+        run: |
+          TAG='${{ steps.tag.outputs.value }}'
+          STATUS=$(curl -sS --max-time 120 \
+            "https://jitpack.io/api/builds/com.github.${{ github.repository_owner }}/query-counter" \
+            | python3 -c "import json,sys,os; print(json.load(sys.stdin)['com.github.${{ github.repository_owner }}']['query-counter'].get(os.environ['TAG'],'없음'))" )
+          echo "JitPack 상태: $STATUS"
+          test "$STATUS" = "ok" || exit 1
+        env:
+          TAG: ${{ steps.tag.outputs.value }}

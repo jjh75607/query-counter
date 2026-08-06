@@ -36,6 +36,7 @@ locked in by a test, not just documented.
 # Table of contents
 
 - [Getting started](#getting-started)
+    - [Requirements](#requirements)
     - [Install](#install)
     - [Configure](#configure)
     - [Usage](#usage)
@@ -47,6 +48,16 @@ locked in by a test, not just documented.
 - [Settings](#settings)
 
 # Getting started
+
+## Requirements
+
+| | Version |
+|---|---|
+| Java | 17 or later |
+| Spring Boot | 3.0 or later |
+
+Verified in CI against Spring Boot 3.0.0 and the version this project builds against. The
+library targets Java 17 bytecode, so it runs on any later JVM.
 
 ## Install
 

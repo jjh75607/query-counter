@@ -6,6 +6,12 @@
 
 ---
 
+## [Unreleased]
+### Added
+- CI 워크플로. `master` push 와 PR 에서 Spring Boot 하한(3.0.0)과 기본값 두 조합으로 `./gradlew build` 를 돌립니다
+- 릴리스 검증 워크플로. 릴리스 직후 JitPack 빌드 상태와 산출물, 자동 설정 등록 파일 포함 여부를 확인합니다
+- README 에 요구 사항 표 추가. Java 17 이상, Spring Boot 3.0 이상. CI 가 검증하는 범위와 일치시켰습니다
+
 ## [0.1.0] - 2026-08-06
 ### Added
 - `@ExtendWith(QueryCountTestExtension.class)` 없이도 동작합니다. `TestExecutionListener` 를 `META-INF/spring.factories` 에 등록해 모든 Spring 테스트가 자동으로 집어갑니다

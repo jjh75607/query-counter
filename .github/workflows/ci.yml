@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    # 문서에 적은 지원 범위를 실제로 검증한다.
+    # 하한(3.0.0)과 기본값을 모두 돌려, 지원한다고 적은 범위만 적혀 있게 유지한다.
+    name: Build (Spring Boot ${{ matrix.spring-boot || 'default' }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - spring-boot: ''        # build.gradle 의 기본값
+          - spring-boot: '3.0.0'   # 지원하는 하한
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 툴체인이 컴파일과 테스트 JVM 을 17 로 고정한다. JitPack 도 17 로 빌드한다.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x ./gradlew
+
+      # test 가 아니라 build 를 돌린다. 라이브러리라서 jar, sources jar,
+      # javadoc jar 생성과 javadoc 컴파일까지 검증해야 한다.
+      - name: Build
+        run: |
+          if [ -n "${{ matrix.spring-boot }}" ]; then
+            ./gradlew build -PspringBootVersion=${{ matrix.spring-boot }}
+          else
+            ./gradlew build
+          fi
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.spring-boot || 'default' }}
+          path: build/reports/tests/test/
+          retention-days: 7
