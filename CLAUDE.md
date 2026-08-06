@@ -110,12 +110,50 @@ PR 본문에 배경과 판단을 적으면 이슈에 같은 내용을 한 번 �
 에러 메시지 형식을 README에 예시로 적어둔 곳이 있다. 메시지를 바꾸면 그 예시도 함께 고친다.
 과거에 실행 시간 메시지가 코드와 어긋난 채 남아 있었다.
 
+## 주석과 표기
+
+### 주석 언어
+
+읽는 사람이 누구인지로 갈린다. 공개 API 는 이 라이브러리를 쓰는 사람이 IDE 에서 보고,
+내부 구현은 이 저장소를 고치는 사람만 본다.
+
+| 대상 | 언어 |
+|---|---|
+| 공개 API 의 Javadoc | **영어.** 사용자가 IDE 자동완성과 Javadoc 에서 본다 |
+| `QueryCounterProperties` 의 프로퍼티 설명 | **영어.** IDE 자동완성 메타데이터로 나간다 |
+| 내부 클래스의 Javadoc | **한국어.** `AutoConfig`, `DataSourceProxyBeanPostProcessor`, `QueryCountVerifier` |
+| 메서드 안의 구현 주석 (`//`) | **한국어.** 왜 이렇게 했는지를 적는 자리다 |
+| 테스트 | **한국어.** `@DisplayName` 이 한국어라 영어 주석과 섞으면 읽기 나쁘다 |
+
+공개 API 는 `QueryCounterAssertion`, `TableQueryAssertion`, `QueryCountContext`,
+`QueryCountTestExtension`, `QueryCountTestExecutionListener`, `QueryCounterProperties` 다.
+
+### 다른 저장소의 이슈 번호
+
+**백틱으로 감싼다.** `` `quick-perf/quickperf#199` `` 처럼 쓴다.
+
+감싸지 않으면 GitHub 이 그 저장소에 상호 참조를 남긴다. 이미 닫힌 이슈에도 알림이 가고
+타임라인이 지저분해진다. 남의 저장소에 노이즈를 남기지 않는다. 상호 참조는 한 번 생기면
+본문을 고쳐도 지워지지 않으므로, 애초에 만들지 않는 것이 유일한 대응이다.
+
+적용 범위는 GitHub 이 렌더링하는 곳 전부다. **커밋 메시지도 포함된다.** 놓치기 쉬운 자리다.
+
+| 자리 | 적용 |
+|---|---|
+| 이슈와 PR 의 본문, 댓글 | 적용 |
+| 커밋 메시지 | 적용. GitHub 이 링크로 만든다 |
+| Java 소스의 Javadoc 과 주석 | 해당 없음. 렌더링되지 않는다. 백틱 대신 그대로 쓴다 |
+
+링크가 꼭 필요하면 URL 도 백틱 안에 넣는다. 이 저장소 안의 이슈와 PR 번호는 그대로 쓴다.
+상호 참조가 목적에 맞는다.
+
 ## 테스트 규칙
 
 | 항목 | 관례 |
 |---|---|
 | 메서드 이름 | 영어 camelCase. 예: `verifyShouldFailWhenCountsDoNotMatch` |
 | `@DisplayName` | **한국어 문장.** 행위와 결과를 함께 쓴다 |
+| 주석 | 한국어 |
 | 단정 | AssertJ (`assertThat`, `assertThatThrownBy`) |
 | 구조 | `// given` `// when` `// then` |
 | 자동 설정 검증 | `ApplicationContextRunner` |
