@@ -15,7 +15,7 @@ import soon.springtestutil.querycount.extension.QueryCountTestExtension;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @EnableAutoConfiguration
-@SpringBootTest(classes = AutoConfig.class)
+@SpringBootTest(classes = AutoConfig.class, properties = "query-counter.enabled=true")
 @ExtendWith(QueryCountTestExtension.class)
 public class QueryCountAssertionIntegrationTest {
 

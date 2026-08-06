@@ -32,7 +32,7 @@ class DataSourceProxyBeanPostProcessorTest {
 
     @BeforeEach
     void setUp() {
-        processor = new DataSourceProxyBeanPostProcessor();
+        processor = new DataSourceProxyBeanPostProcessor(false);
     }
 
     @DisplayName("DataSoruce가 아닌 빈은 프록시하지 않고 원본 빈을 반환한다.")
