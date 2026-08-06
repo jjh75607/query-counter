@@ -48,19 +48,69 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
         return PriorityOrdered.LOWEST_PRECEDENCE - 1;
     }
 
+    /**
+     * 위임 사슬을 따라갈 최대 깊이입니다. DataSource가 서로를 가리키는 구성이 있어도
+     * 무한히 돌지 않게 합니다.
+     */
+    private static final int MAX_DELEGATION_DEPTH = 16;
+
     @Override
     public Object postProcessAfterInitialization(
         @Nonnull Object bean,
         @Nonnull String beanName
     ) throws BeansException {
-        if (bean instanceof DataSource && !(bean instanceof ProxyDataSource)) {
+        if (bean instanceof DataSource dataSource && !alreadyCounted(dataSource)) {
             ProxyFactory factory = new ProxyFactory(bean);
             factory.setProxyTargetClass(true); // 다양한 DataSource 구현체를 지원하기 위해 CGLIB 프록시 사용
-            factory.addAdvice(ProxyDataSourceInterceptor.of((DataSource) bean, this.loggingEnabled));
+            factory.addInterface(QueryCountedDataSource.class);
+            factory.addAdvice(ProxyDataSourceInterceptor.of(dataSource, this.loggingEnabled));
             return factory.getProxy();
         }
 
         return bean;
+    }
+
+    /**
+     * 이 DataSource를 거치는 쿼리가 이미 기록되는지 판단합니다.
+     *
+     * <p>자기 자신이 감싸져 있는 경우와, 위임하는 대상이 이미 감싸져 있는 경우를 모두 봅니다.
+     * 뒤쪽이 중요합니다. {@code LazyConnectionDataSourceProxy}처럼 다른 DataSource 빈을
+     * 위임하는 빈은 그 자신이 감싸진 적은 없지만, 위임 대상이 이미 감싸져 있으면 여기서 한 번
+     * 더 감쌀 때 같은 쿼리가 두 번 기록됩니다.
+     */
+    private boolean alreadyCounted(DataSource dataSource) {
+        DataSource current = dataSource;
+
+        for (int depth = 0; current != null && depth < MAX_DELEGATION_DEPTH; depth++) {
+            if (current instanceof QueryCountedDataSource || current instanceof ProxyDataSource) {
+                return true;
+            }
+            current = targetOf(current);
+        }
+
+        return false;
+    }
+
+    /**
+     * 위임 대상 DataSource를 꺼냅니다. 위임하지 않으면 {@code null}입니다.
+     *
+     * <p>{@code DelegatingDataSource}로 타입을 보지 않고 {@code getTargetDataSource} 메서드를
+     * 찾는 이유는 그 클래스가 spring-jdbc에 있기 때문입니다. 이 라이브러리는 spring-jdbc에
+     * 의존하지 않습니다. 여기서 의존을 만들면 DataSource 빈만 있고 spring-jdbc는 없는
+     * 프로젝트에서 깨집니다.
+     *
+     * <p>덤으로 같은 이름의 접근자를 가진 직접 만든 위임 구현도 함께 알아봅니다. 그 밖의
+     * 방식으로 위임하는 구현은 알아보지 못합니다.
+     */
+    private DataSource targetOf(DataSource dataSource) {
+        Method method = ReflectionUtils.findMethod(dataSource.getClass(), "getTargetDataSource");
+        if (method == null || !DataSource.class.isAssignableFrom(method.getReturnType())) {
+            return null;
+        }
+
+        ReflectionUtils.makeAccessible(method);
+        Object target = ReflectionUtils.invokeMethod(method, dataSource);
+        return target instanceof DataSource targetDataSource ? targetDataSource : null;
     }
 
     /**
