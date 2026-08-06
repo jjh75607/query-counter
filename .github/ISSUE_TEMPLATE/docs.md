@@ -2,7 +2,6 @@
 name: Documentation
 about: 문서 작업 시 사용하는 이슈 템플릿입니다.
 title: "Docs: "
-labels: Docs
 assignees:
 ---
 

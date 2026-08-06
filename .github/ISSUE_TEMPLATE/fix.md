@@ -2,7 +2,6 @@
 name: Fix
 about: 버그 수정 시 사용하는 이슈 템플릿입니다.
 title: "Fix: "
-labels: fix
 assignees:
 ---
 

@@ -2,7 +2,6 @@
 name: Test
 about: 테스트 코드만 작성 및 수정 시 사용
 title: "Test: "
-labels: Test
 assignees:
 ---
 

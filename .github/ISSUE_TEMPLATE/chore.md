@@ -2,7 +2,6 @@
 name: Chore
 about: 기능에 영향을 주지 않는 단순 작업용 템플릿
 title: "Chore: "
-labels: Chore
 assignees:
 ---
 

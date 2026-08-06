@@ -2,7 +2,6 @@
 name: Setting
 about: 프로젝트 설정 관련 작업 시 사용
 title: "Setting: "
-labels: Setting
 assignees:
 ---
 
