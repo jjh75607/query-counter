@@ -3,10 +3,10 @@ package soon.springtestutil.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * query-counter 동작을 제어하는 설정입니다.
+ * Settings that control query-counter.
  *
- * <p>기본값은 모두 비활성입니다. 활성화하지 않으면 DataSource를 감싸지 않으므로
- * 이 라이브러리를 쓰지 않는 테스트에는 아무 영향을 주지 않습니다.
+ * <p>Everything is disabled by default. When not enabled, the DataSource is left
+ * untouched, so this library has no effect on tests that do not use it.
  *
  * <pre>{@code
  * query-counter:
@@ -19,7 +19,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class QueryCounterProperties {
 
     /**
-     * 쿼리 카운팅 활성화 여부입니다. 켜면 DataSource를 프록시로 감싸 실행된 쿼리를 기록합니다.
+     * Whether to count queries. When enabled, the DataSource is wrapped in a proxy that records every executed query.
      */
     private boolean enabled = false;
 
@@ -38,12 +38,13 @@ public class QueryCounterProperties {
     }
 
     /**
-     * 실행된 SQL을 로그로 출력하는 설정입니다. 쿼리 카운팅과는 별개이며 기본값은 비활성입니다.
+     * Logging of executed SQL. Independent of query counting and disabled by default,
+     * because always-on SQL logging is noisy in projects with many tests.
      */
     public static class Logging {
 
         /**
-         * 실행된 SQL을 SLF4J로 출력할지 여부입니다.
+         * Whether to log every executed SQL statement through SLF4J.
          */
         private boolean enabled = false;
 

@@ -8,8 +8,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 현재 스레드에서 실행된 쿼리 정보를 저장하고 관리하는 유틸리티 클래스입니다. 이 클래스는 {@link ThreadLocal}을 사용하여 각 스레드별로 쿼리 정보를 격리합니다.
- * 모든 메서드는 정적이며, 인스턴스화할 수 없습니다.
+ * Collects the queries executed on the current thread.
+ *
+ * <p>Uses {@link ThreadLocal} so that concurrently running tests do not see each
+ * other's queries. Every method is static and this class cannot be instantiated.
+ *
+ * <p>The collected state is cleared before and after each test, and again when
+ * an assertion completes. Tests that never assert must clear it themselves.
  */
 public final class QueryCountContext {
 
