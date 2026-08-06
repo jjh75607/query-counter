@@ -10,19 +10,30 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
+import soon.springtestutil.querycount.context.QueryCountContext;
 import soon.springtestutil.querycount.datasource.QueryCountListener;
 
 import javax.sql.DataSource;
 import java.lang.reflect.Method;
 
 /**
- * DataSource 빈을 프록시로 감싸는 BeanPostProcessor입니다.
- * 이 프로세서는 DataSource 빈이 초기화된 후에 호출되어, SLF4J를 사용하여 쿼리를 로깅하는 ProxyDataSource로 감쌉니다.
+ * DataSource 빈을 프록시로 감싸 실행된 쿼리를 기록하는 BeanPostProcessor입니다.
+ *
+ * <p>{@link AutoConfig}가 {@code query-counter.enabled=true}인 경우에만 이 빈을 등록합니다.
+ * 따라서 활성화하지 않은 프로젝트에서는 DataSource가 감싸지지 않습니다.
+ *
+ * <p>SQL 로깅은 {@code query-counter.logging.enabled}로 따로 켭니다. 쿼리 카운팅과 무관한
+ * 기능이고 테스트가 많은 프로젝트에서는 로그가 오염되므로 기본값은 비활성입니다.
  **/
-@Component
 public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor {
+
+    private final boolean loggingEnabled;
+
+    public DataSourceProxyBeanPostProcessor(boolean loggingEnabled) {
+        this.loggingEnabled = loggingEnabled;
+        QueryCountContext.markActive();
+    }
 
     @Override
     public Object postProcessAfterInitialization(
@@ -32,7 +43,7 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor {
         if (bean instanceof DataSource && !(bean instanceof ProxyDataSource)) {
             ProxyFactory factory = new ProxyFactory(bean);
             factory.setProxyTargetClass(true); // 다양한 DataSource 구현체를 지원하기 위해 CGLIB 프록시 사용
-            factory.addAdvice(new ProxyDataSourceInterceptor((DataSource) bean));
+            factory.addAdvice(ProxyDataSourceInterceptor.of((DataSource) bean, this.loggingEnabled));
             return factory.getProxy();
         }
 
@@ -44,15 +55,19 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor {
      */
     private record ProxyDataSourceInterceptor(DataSource dataSource) implements MethodInterceptor {
 
-        private ProxyDataSourceInterceptor(DataSource dataSource) {
+        private static ProxyDataSourceInterceptor of(DataSource dataSource, boolean loggingEnabled) {
             ChainListener listener = new ChainListener();
-            listener.addListener(new SLF4JQueryLoggingListener());
+            if (loggingEnabled) {
+                listener.addListener(new SLF4JQueryLoggingListener());
+            }
             listener.addListener(new QueryCountListener());
 
-            this.dataSource = ProxyDataSourceBuilder.create(dataSource)
-                .name("DataSource-Proxy")
-                .listener(listener)
-                .build();
+            return new ProxyDataSourceInterceptor(
+                ProxyDataSourceBuilder.create(dataSource)
+                    .name("DataSource-Proxy")
+                    .listener(listener)
+                    .build()
+            );
         }
 
         @Override
