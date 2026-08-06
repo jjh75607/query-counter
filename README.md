@@ -2,35 +2,55 @@
 
 [![JitPack](https://jitpack.io/v/jjh75607/query-counter.svg)](https://jitpack.io/#jjh75607/query-counter)
 
+[한국어](README.ko.md)
+
 ***
-> Hibernate를 통해 실행되는 쿼리의 수와 실행 시간을 검증할 수 있는 테스트 라이브러리
+> A test library for asserting how many queries a Spring test executes, and how long they take.
 
-#### 기대 효과
+Catch N+1 problems and slow queries while writing tests, not after deploying.
 
-- N+1 문제를 테스트 단계에서 미리 발견
-    - 쿼리 성능을 검증하는 테스트 코드 작성을 자연스럽게 유도
-- 슬로우 쿼리 방지로 성능 최적화
-- 특정 테이블만 선별적 검증 가능
-- 기대 쿼리 수를 코드로 계산해서 지정 가능
-    - `select(members.size() + 1)` 처럼 테스트 데이터에 따라 달라지는 기대값을 그대로 표현
-    - 애노테이션 기반 도구는 기대값이 컴파일 시점에 고정되어야 하므로 표현할 수 없는 경우
+#### What it does that annotation-based tools cannot
 
-# 목차
+- **Assert per table.** Verify only the queries that touch the tables you care about, even when
+  the test touches several.
+- **Compute expected counts at runtime.** Expected values are plain `long` values, so
+  `select(members.size() + 1)` works. Annotations need their values fixed at compile time,
+  so they cannot express expectations that depend on test data or parameterized cases.
 
-- [시작하기](#시작하기)
-    - [설치](#설치)
-    - [사용법](#사용법)
+#### What it does not do
+
+This is a narrow tool. [QuickPerf](https://github.com/quick-perf/quickperf) covers a much wider
+surface and does these, which query-counter does not: detecting N+1 directly, asserting on
+selected or updated columns, asserting JDBC batching, forbidding anti-patterns such as
+`LIKE '%...'` or statements without bind parameters, and JVM profiling.
+
+Reach for query-counter when you want table-scoped counts or runtime-computed expectations with a
+fluent assertion. Reach for QuickPerf when you want breadth.
+
+#### Never in the way
+
+**When you do not enable it, this library does nothing.** The DataSource is left untouched, so
+adding the dependency cannot change the behaviour of tests that do not use it. That property is
+locked in by a test, not just documented.
+
+# Table of contents
+
+- [Getting started](#getting-started)
+    - [Install](#install)
+    - [Configure](#configure)
+    - [Usage](#usage)
 - [API](#api)
-    - [메서드](#메서드)
-    - [예제](#예제)
-- [예외처리](#예외처리)
-    - [에러 메시지 형식](#에러-메시지-형식)
+    - [Methods](#methods)
+    - [Examples](#examples)
+- [Failures](#failures)
+    - [Message format](#message-format)
+- [Settings](#settings)
 
-# 시작하기
+# Getting started
 
-## 설치
+## Install
 
-`build.gradle`에 의존성을 추가해주세요.
+Add the dependency to `build.gradle`.
 
 ```groovy
 repositories {
@@ -39,19 +59,29 @@ repositories {
 }
 
 dependencies {
-    // 최신 버전은 상단의 JitPack 배지 참고
+    // For the latest version see the JitPack badge above
     testImplementation("com.github.jjh75607:query-counter:v0.0.6")
 }
 ```
 
-## 사용법
+## Configure
 
-`@SpringBootTest`와 함께 테스트 코드에 `@ExtendWith(QueryCountTestExtension.class)` 어노테이션을 추가하여 사용합니다.
+Enable it in your test configuration, for example `src/test/resources/application.yml`.
+
+```yaml
+query-counter:
+  enabled: true
+```
+
+Without this, the library stays inactive and no query is recorded. If an assertion fails and
+nothing was recorded, the failure message reminds you of this setting.
+
+## Usage
+
+Write the assertion in the `then` block of a Spring test. **No annotation is required.**
 
 ```java
-
 @SpringBootTest
-@ExtendWith(QueryCountTestExtension.class)
 class MemberServiceTest {
 
     @Autowired
@@ -67,36 +97,44 @@ class MemberServiceTest {
 
         // then
         QueryCounterAssertion.assertCounts()
-            .forTables("member") // member 테이블에 대한 쿼리만 검증
-            .insert(1)           // INSERT 1회 실행 예상
-            .verify();           // 검증 실행
+            .forTables("member") // only assert queries against member
+            .insert(1)           // expect one INSERT
+            .verify();           // optional, see below
     }
 }
 ```
 
+**`verify()` is optional.** An assertion that is created but never verified is checked
+automatically when the test method finishes, so a forgotten `verify()` can never make a test pass
+silently. Call it when you want the failure to surface at that exact line.
+
+If your test does not load a Spring test context, add
+`@ExtendWith(QueryCountTestExtension.class)` so that recorded queries are still isolated between
+tests. Spring tests do not need it.
+
 ### API
 
-##### 메서드
+##### Methods
 
-| 메서드                              | 설명                                            |
-  |----------------------------------|-----------------------------------------------|
-| `forTable(String table)`         | 특정 테이블에 대한 쿼리 검증 조건을 개별 설정합니다. 체이닝으로 여러 테이블에 각각 다른 조건 설정 가능 |
-| `forTables(String... tables)`    | 검증할 테이블 이름을 지정합니다. 지정하지 않으면 모든 테이블 쿼리를 검증합니다. |
-| `forTables(List<String> tables)` | 리스트 형태로 검증할 테이블 이름 지정                         |
-| `select(long expected)`          | SELECT 쿼리 실행 횟수 검증                            |
-| `insert(long expected)`          | INSERT 쿼리 실행 횟수 검증                            |
-| `update(long expected)`          | UPDATE 쿼리 실행 횟수 검증                            |
-| `delete(long expected)`          | DELETE 쿼리 실행 횟수 검증                            |
-| `others(long expected)`          | 나머지 쿼리 실행 횟수 검증                               |
-| `maxExecutionTimeMs(long ms)`    | 개별 쿼리 최대 실행 시간을 지정, 초과 시 AssertionError 발생    |
-| `verify()`                       | 설정한 조건으로 쿼리 검증 **반드시 호출**                     |
+| Method | Description |
+|---|---|
+| `forTable(String table)` | Assert on a single table. Chain the call to assert different expectations per table |
+| `forTables(String... tables)` | Restrict the assertion to the given tables, counted together. When omitted, every table is counted |
+| `forTables(List<String> tables)` | Same, taking a list |
+| `select(long expected)` | Expected number of SELECT statements |
+| `insert(long expected)` | Expected number of INSERT statements |
+| `update(long expected)` | Expected number of UPDATE statements |
+| `delete(long expected)` | Expected number of DELETE statements |
+| `others(long expected)` | Expected number of any other statements |
+| `maxExecutionTimeMs(long ms)` | Fail if a single query takes longer than this |
+| `verify()` | Run the assertions now. Optional, since unverified assertions are checked after the test |
 
-기대값은 `long`이므로 상수뿐 아니라 식도 넘길 수 있습니다. 테스트 데이터의 개수나 파라미터화 테스트의 케이스에 따라 기대 쿼리 수가 달라지는 경우 그대로 계산해서 지정하면 됩니다.
+Expected values are `long`, so expressions work as well as constants. When the expected number of
+queries depends on the amount of test data or on a parameterized case, compute it.
 
-##### 예제
+##### Examples
 
 ```java
-
 @Test
 void getMember() {
     // given
@@ -108,8 +146,8 @@ void getMember() {
 
     // then
     QueryCounterAssertion.assertCounts()
-        .select(1)  // SELECT 1회
-        .insert(1)  // INSERT 1회 (테스트 데이터 삽입)
+        .select(1)
+        .insert(1)
         .verify();
 }
 
@@ -127,16 +165,16 @@ void updateOrderWithExecutionTimeCheck() {
 
     // then
     QueryCounterAssertion.assertCounts()
-        .forTables("orders", "products")  // 특정 테이블만 검증
-        .insert(2)                        // orders, products 각각 INSERT 1회
-        .select(1)                        // SELECT 1회
-        .update(1)                        // UPDATE 1회
-        .maxExecutionTimeMs(100)          // 개별 쿼리 최대 100ms
+        .forTables("orders", "products")
+        .insert(2)
+        .select(1)
+        .update(1)
+        .maxExecutionTimeMs(100)
         .verify();
 }
 
 @Test
-void verifyQueryCountPerTable() {
+void differentExpectationsPerTable() {
     // given
     Member member = new Member("test");
     memberRepository.save(member);
@@ -148,7 +186,7 @@ void verifyQueryCountPerTable() {
     memberService.getMember(member.getId());
     productService.getProducts();
 
-    // then - 테이블별로 각각 다른 쿼리 수 검증
+    // then
     QueryCounterAssertion.assertCounts()
         .forTable("member").insert(1).select(1)
         .forTable("product").insert(1).select(1)
@@ -156,24 +194,8 @@ void verifyQueryCountPerTable() {
 }
 
 @Test
-void verifyQueryCountPerTableWithExecutionTime() {
-    // given
-    Member member = new Member("test");
-    memberRepository.save(member);
-
-    // when
-    memberService.getMember(member.getId());
-
-    // then - 테이블별 쿼리 수 + 실행 시간 검증
-    QueryCounterAssertion.assertCounts()
-        .forTable("member").insert(1).select(1).maxExecutionTimeMs(100)
-        .forTable("orders").select(2).maxExecutionTimeMs(200)
-        .verify();
-}
-
-@Test
-void 기대값을_런타임에_계산() {
-    // given - 데이터 개수가 바뀌면 기대 쿼리 수도 함께 바뀐다
+void expectedCountComputedAtRuntime() {
+    // given - the expected number of queries follows the amount of data
     List<Member> members = memberRepository.saveAll(
         List.of(new Member("a"), new Member("b"), new Member("c"))
     );
@@ -181,7 +203,7 @@ void 기대값을_런타임에_계산() {
     // when
     memberService.getMembersWithTeam();
 
-    // then - 팀을 한 번에 가져오면 SELECT 1회, N+1이면 members.size() + 1회
+    // then - one SELECT when teams are fetched together, members.size() + 1 when N+1 happens
     QueryCounterAssertion.assertCounts()
         .forTables("member")
         .select(1)
@@ -191,7 +213,7 @@ void 기대값을_런타임에_계산() {
 
 @ParameterizedTest
 @ValueSource(ints = {1, 5, 10})
-void 케이스마다_기대값이_다른_경우(int count) {
+void expectationPerParameterizedCase(int count) {
     // given
     for (int i = 0; i < count; i++) {
         memberRepository.save(new Member("member" + i));
@@ -200,74 +222,58 @@ void 케이스마다_기대값이_다른_경우(int count) {
     // when
     memberService.getMembers();
 
-    // then - 케이스별 기대값을 파라미터로 계산
+    // then
     QueryCounterAssertion.assertCounts()
         .forTables("member")
         .insert(count)
         .select(1)
         .verify();
 }
-
 ```
 
-### 예외처리
+### Failures
 
-- 예상과 실제 쿼리 횟수가 다르면 AssertionError 발생
-- 예상 시간을 초과하는 쿼리가 있으면 AssertionError 발생
+- An `AssertionError` is thrown when the number of queries differs from what you expected.
+- An `AssertionError` is thrown when a query takes longer than `maxExecutionTimeMs`.
+- Every mismatch is reported together, so you do not fix them one at a time.
 
-#### 에러 메시지 형식
+#### Message format
 
-``` text
-java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}] Query count assertion failed:
+```text
+java.lang.AssertionError: [Test: {package}.{class}#{method}] Query count assertion failed:
 QueryType.SELECT: expected 3, but was 2
 ```
 
-``` text
-java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}] Table-specific query count assertion failed:
+```text
+java.lang.AssertionError: [Test: {package}.{class}#{method}] Table-specific query count assertion failed:
 Table 'member' - QueryType.SELECT: expected 2, but was 1
 ```
 
-``` text
-java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}]
+```text
+java.lang.AssertionError: [Test: {package}.{class}#{method}]
 Query execution time assertion failed: max=100ms, violations=1
-First violation: 120ms > 100ms, type=SELECT
-SQL: SELECT * FROM member
+[1] 120ms > 100ms, type=SELECT, SQL: SELECT * FROM member
 ```
 
-``` text
-java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}]
-Table 'member' execution time assertion failed: max=100ms, violations=1
-First violation: 120ms > 100ms, type=SELECT
-SQL: SELECT * FROM member
+When an assertion fails and no query was recorded at all, the message adds a reminder, because the
+usual cause is a missing setting:
+
+```text
+No query was recorded. Is query-counter.enabled=true set in your test configuration?
 ```
 
-#### 예시
+# Settings
 
-```java
+| Property | Default | Description |
+|---|---|---|
+| `query-counter.enabled` | `false` | Count queries. When enabled, the DataSource is wrapped in a proxy that records every executed query |
+| `query-counter.logging.enabled` | `false` | Log every executed SQL statement through SLF4J. Independent of counting, and off by default because always-on SQL logging is noisy in projects with many tests |
 
-@Test
-void failedVerify() {
-    // given
-    Member member = new Member("test");
-
-    // when
-    memberService.createMember(member); // INSERT 2회 발생
-
-    // then
-    QueryCounterAssertion.assertCounts()
-        .insert(1) // 1회 예상
-        .verify();  // AssertionError 발생
-}
-
-@Test
-void failedExecutionTime() {
-    // given
-    jdbcTemplate.execute("CALL SLEEP(120)"); // 120ms 쿼리
-
-    // then
-    QueryCounterAssertion.assertCounts()
-        .maxExecutionTimeMs(100) // 최대 100ms 지정
-        .verify();               // AssertionError 발생
-}
-
+```yaml
+query-counter:
+  enabled: true
+  logging:
+    enabled: false
 ```
+
+Both properties appear with descriptions in IDE autocompletion.

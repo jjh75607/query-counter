@@ -31,7 +31,8 @@ querycount/
   assertion/QueryCounterAssertion   플루언트 빌더 (전체 대상)
   assertion/TableQueryAssertion     플루언트 빌더 (테이블별)
   assertion/QueryCountVerifier      실제 비교와 오류 메시지 조립
-  extension/QueryCountTestExtension JUnit 확장. 테스트 전후 ThreadLocal 정리
+  extension/QueryCountTestExecutionListener  Spring 테스트용. spring.factories 로 자동 등록
+  extension/QueryCountTestExtension          JUnit 확장. Spring 컨텍스트를 띄우지 않는 테스트용
 ```
 
 흐름은 세 층이다. **수집(Listener, Context) → 명세(Assertion) → 검증(Verifier).**
@@ -44,10 +45,16 @@ querycount/
 주입받으면 프로퍼티 빈이 너무 이르게 초기화되고 Spring이 경고를 낸다.
 `AutoConfig`에서 `Environment`로 값을 읽어 생성자에 넘긴다.
 
-### 활성 여부 판단에 애플리케이션 컨텍스트를 쓰지 않는다
+### 애플리케이션 컨텍스트를 참조하지 않는다
 
-`TestContext.getApplicationContext()`를 부르면 컨텍스트 로딩이 강제된다.
-감싸기가 실제로 일어났는지를 신호로 쓴다 (`QueryCountContext.markActive()`).
+`TestContext.getApplicationContext()`를 부르면 컨텍스트 로딩이 강제된다. 모든 Spring
+테스트에서 도는 리스너에서는 받아들일 수 없다. ThreadLocal 정리는 활성 여부와 무관하게
+무해하므로 조건 없이 수행한다.
+
+활성 여부를 알려야 할 곳이 하나 있는데, 검증이 실패했고 기록된 쿼리가 0건일 때
+`QueryCountVerifier`가 안내를 덧붙이는 자리다. 판단에 필요한 정보가 이미 ThreadLocal에
+있으므로 별도 상태를 두지 않는다. 예전에 static 플래그를 썼다가 리셋되지 않아 테스트
+불가능해져서 걷어냈다.
 
 ### 알려진 빚
 
@@ -55,12 +62,11 @@ querycount/
 
 | 위치 | 내용 |
 |---|---|
-| `QueryCountContext` | `active` 플래그가 static 이고 리셋되지 않는다 |
 | `QueryCountListener` | `queryTypeCache` 가 SQL 문자열 키의 static 맵인데 비워지지 않는다 |
 | `QueryCountListener` | `elapsedMs` 가 실행 단위 값인데 배치의 모든 쿼리에 같은 값이 붙는다 |
 | `QueryInfo` | 생성자가 테이블 이름을 항상 정규식으로 추출한다. 안 쓰는 경우에도 |
 | `QueryCountVerifier` | 229줄에 private 메서드 13개. 검사를 하나 더 추가하기 전에 검사 단위를 인터페이스로 뽑는 편이 낫다 |
-| `verify()` | 잊으면 테스트가 조용히 통과한다. `TestExecutionListener`로 자동 호출하는 방향으로 정리 예정 |
+| `QueryCounterAssertion` | 검증하지 않은 어서션을 static ThreadLocal 목록으로 들고 있다. 리스너가 비우지만 전역 상태가 하나 늘어난 것은 사실이다 |
 
 ## 작업 규칙
 
@@ -76,6 +82,19 @@ querycount/
 | 머지 | 스쿼시. 제목에 ` (#PR번호)`가 붙는다 |
 | 이슈 본문 | `.github/ISSUE_TEMPLATE/` 의 타입별 템플릿 |
 | PR 본문 | `.github/PULL_REQUEST_TEMPLATE.md` |
+
+## 문서
+
+| 파일 | 용도 |
+|---|---|
+| `README.md` | 영문. 기본 문서다. 사용자가 처음 보는 곳 |
+| `README.ko.md` | 한국어. 두 문서 상단에서 서로 링크한다 |
+| `CHANGELOG.md` | Keep a Changelog 형식. 릴리스 전 변경은 `[Unreleased]` 절에 쌓는다 |
+
+**둘 중 하나만 고치지 않는다.** 사용법이나 API가 바뀌면 두 문서를 함께 고친다.
+
+에러 메시지 형식을 README에 예시로 적어둔 곳이 있다. 메시지를 바꾸면 그 예시도 함께 고친다.
+과거에 실행 시간 메시지가 코드와 어긋난 채 남아 있었다.
 
 ## 테스트 규칙
 
@@ -115,6 +134,6 @@ JitPack은 **배포하는 것이 아니라 요청받을 때 태그를 클론해 
 
 - **테스트 라이브러리에 네트워크 호출을 넣지 않는다.** 대시보드나 리포트가 필요하면
   `build/reports/` 에 자기완결 파일을 쓴다. JaCoCo와 Gradle 테스트 리포트가 그 방식이다
-- 529줄짜리 코드에 일반적인 추상화 작업을 하지 않는다. 다음 기능이 이음새를
+- 코드가 작다. 일반적인 추상화 작업을 미리 하지 않는다. 다음 기능이 이음새를
   알려줄 때 그 자리만 뽑는다
 - 기능 추가와 리팩터링을 한 PR에 섞지 않는다
