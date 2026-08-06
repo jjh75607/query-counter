@@ -6,7 +6,7 @@
 
 ---
 
-## [Unreleased]
+## [0.1.0] - 2026-08-06
 ### Added
 - `@ExtendWith(QueryCountTestExtension.class)` 없이도 동작합니다. `TestExecutionListener` 를 `META-INF/spring.factories` 에 등록해 모든 Spring 테스트가 자동으로 집어갑니다
     - 사용자 쪽 설정이 필요 없습니다
