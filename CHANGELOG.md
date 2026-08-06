@@ -12,6 +12,7 @@
 - 릴리스 검증 워크플로. 릴리스 직후 JitPack 빌드 상태와 산출물, 자동 설정 등록 파일 포함 여부를 확인합니다
 - README 에 요구 사항 표 추가. Java 17 이상, Spring Boot 3.0 이상이며 4.x 도 지원합니다. CI 가 검증하는 범위와 일치시켰습니다
 - 돌아가는 예제 패키지. `src/test/java/soon/springtestutil/example` 에 JPA 엔티티와 사용 예제 테스트를 두어 README 예제가 실제로 컴파일되고 실행되는지 검증합니다
+- Spotless 로 포맷 검사. 사용하지 않는 import 제거, 뒤 공백 제거, 파일 끝 개행, 들여쓰기 4칸 스페이스만 검사하는 설정입니다. `spotlessCheck` 가 `check` 에 물려 있어 `./gradlew build` 와 CI 가 함께 검사합니다. 라이브러리 동작에는 영향이 없습니다
 
 ### Fixed
 - 자동 설정 테스트가 Spring Boot 의 `DataSourceAutoConfiguration` 에 묶여 있어 Spring Boot 4 에서 컴파일되지 않았습니다. 테스트용 DataSource 를 직접 등록하도록 바꿔 버전에 묶이지 않게 했습니다. 라이브러리 본체는 4.x 에서 원래 정상이었습니다

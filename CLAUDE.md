@@ -115,9 +115,16 @@ querycount/
 ```sh
 ./gradlew build
 ./gradlew test --tests '*AutoConfigTest*'
+./gradlew spotlessApply
 ```
 
-checkstyle, format, spotless 태스크는 없다.
+포맷 검사는 Spotless 다. `spotlessCheck` 가 `check` 에 물려 있어 `./gradlew build` 와
+CI 가 함께 검사한다. 어긋나면 `./gradlew spotlessApply` 로 고친다.
+
+**지금 스타일을 고정하는 설정이지 재포맷 도구가 아니다.** 규칙은 사용하지 않는 import 제거,
+뒤 공백 제거, 파일 끝 개행, 들여쓰기 4칸 스페이스 네 가지뿐이다. spring-javaformat 은
+들여쓰기가 탭이라 저장소 전체가 바뀌므로 쓰지 않는다. import 순서 규칙도 걸지 않았다.
+checkstyle 은 없다.
 
 ## 릴리스
 
