@@ -11,9 +11,11 @@
 - CI 워크플로. `master` push 와 PR 에서 Spring Boot 하한(3.0.0)과 기본값 두 조합으로 `./gradlew build` 를 돌립니다
 - 릴리스 검증 워크플로. 릴리스 직후 JitPack 빌드 상태와 산출물, 자동 설정 등록 파일 포함 여부를 확인합니다
 - README 에 요구 사항 표 추가. Java 17 이상, Spring Boot 3.0 이상이며 4.x 도 지원합니다. CI 가 검증하는 범위와 일치시켰습니다
+- 돌아가는 예제 패키지. `src/test/java/soon/springtestutil/example` 에 JPA 엔티티와 사용 예제 테스트를 두어 README 예제가 실제로 컴파일되고 실행되는지 검증합니다
 
 ### Fixed
 - 자동 설정 테스트가 Spring Boot 의 `DataSourceAutoConfiguration` 에 묶여 있어 Spring Boot 4 에서 컴파일되지 않았습니다. 테스트용 DataSource 를 직접 등록하도록 바꿔 버전에 묶이지 않게 했습니다. 라이브러리 본체는 4.x 에서 원래 정상이었습니다
+- 문서에 셋업 쿼리도 카운트에 포함된다는 설명을 추가했습니다. 기록은 테스트 메서드 직전에 초기화되므로 `@BeforeEach` 의 쿼리가 함께 세집니다
 
 ## [0.1.0] - 2026-08-06
 ### Added

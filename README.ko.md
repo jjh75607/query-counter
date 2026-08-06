@@ -120,6 +120,16 @@ class MemberServiceTest {
 Spring 테스트 컨텍스트를 띄우지 않는 테스트라면 `@ExtendWith(QueryCountTestExtension.class)`를
 붙여야 테스트 간에 기록이 격리됩니다. Spring 테스트에는 필요하지 않습니다.
 
+### 돌아가는 예제
+
+아래 예제들은 [`src/test/java/soon/springtestutil/example`](src/test/java/soon/springtestutil/example)
+에 실제 테스트로도 들어 있어 `./gradlew build` 로 컴파일과 실행이 검증됩니다. 그 패키지는 JPA
+엔티티를 써서 N+1 이 생기는 모습과 `join fetch` 로 사라지는 모습을 보여줍니다.
+
+**셋업 쿼리도 카운트에 포함됩니다.** 기록은 테스트 메서드가 시작되기 직전에 초기화되므로
+`@BeforeEach` 나 `given` 블록에서 실행한 쿼리가 함께 셉니다. `when` 블록의 쿼리만 세고 싶으면
+셋업 뒤에 `QueryCountContext.clear()` 를 부르면 됩니다.
+
 ### API
 
 ##### 메서드
