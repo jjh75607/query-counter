@@ -15,6 +15,7 @@
 - Spotless 로 포맷 검사. 사용하지 않는 import 제거, 뒤 공백 제거, 파일 끝 개행, 들여쓰기 4칸 스페이스만 검사하는 설정입니다. `spotlessCheck` 가 `check` 에 물려 있어 `./gradlew build` 와 CI 가 함께 검사합니다. 라이브러리 동작에는 영향이 없습니다
 
 ### Fixed
+- **앞에 주석이 붙거나 CTE 로 시작하는 SQL 이 모두 `OTHERS` 로 분류되던 문제를 고쳤습니다.** 판정 전에 선행 주석(`/* */` 와 `--`)을 벗겨내고, `WITH` 로 시작하면 괄호 밖의 첫 키워드로 판정합니다. `hibernate.use_sql_comments=true` 를 켠 프로젝트는 Hibernate 가 모든 SQL 앞에 주석을 붙이므로 모든 쿼리가 `OTHERS` 가 되어 `select(n)` 을 쓰는 테스트가 전부 0건으로 보였습니다
 - **DataSource 빈이 다른 DataSource 빈을 위임하면 쿼리가 두 번 세지던 문제를 고쳤습니다.** `LazyConnectionDataSourceProxy` 처럼 다른 DataSource 를 감싸는 빈이 있으면 안쪽과 바깥쪽이 모두 감싸져 같은 쿼리가 두 번 기록됐습니다. 위임 대상이 이미 감싸져 있으면 바깥쪽은 감싸지 않도록 했습니다. 서로 위임하지 않는 DataSource 가 둘인 구성에서는 종전대로 양쪽 모두 기록됩니다
 - **DataSource 에 의존하는 다른 `BeanPostProcessor` 가 있으면 쿼리가 하나도 기록되지 않던 문제를 고쳤습니다.** `Ordered` 를 구현하면서 DataSource 를 주입받는 `BeanPostProcessor` 가 있으면 그것을 만드는 과정에서 DataSource 가 먼저 만들어져 감싸지지 않았습니다. 이 라이브러리의 `BeanPostProcessor` 가 `PriorityOrdered` 를 구현하도록 바꿔 항상 먼저 등록되게 했습니다. 증상이 카운트 불일치가 아니라 0건이었고 안내 문구도 원인과 어긋나 있어 찾기 어려운 문제였습니다
 - 자동 설정 테스트가 Spring Boot 의 `DataSourceAutoConfiguration` 에 묶여 있어 Spring Boot 4 에서 컴파일되지 않았습니다. 테스트용 DataSource 를 직접 등록하도록 바꿔 버전에 묶이지 않게 했습니다. 라이브러리 본체는 4.x 에서 원래 정상이었습니다
