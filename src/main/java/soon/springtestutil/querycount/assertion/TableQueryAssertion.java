@@ -13,7 +13,7 @@ public class TableQueryAssertion {
 
     private final QueryCounterAssertion parent;
     private final String tableName;
-    private final Map<QueryType, Long> expectedCounts = new EnumMap<>(QueryType.class);
+    private final Map<QueryType, ExpectedCount> expectedCounts = new EnumMap<>(QueryType.class);
     private Long maxExecutionTimeMs;
 
     TableQueryAssertion(QueryCounterAssertion parent, String tableName) {
@@ -28,27 +28,47 @@ public class TableQueryAssertion {
     }
 
     public TableQueryAssertion select(long count) {
-        expectedCounts.put(QueryType.SELECT, count);
+        return select(ExpectedCount.exactly(count));
+    }
+
+    public TableQueryAssertion select(ExpectedCount expected) {
+        expectedCounts.put(QueryType.SELECT, expected);
         return this;
     }
 
     public TableQueryAssertion insert(long count) {
-        expectedCounts.put(QueryType.INSERT, count);
+        return insert(ExpectedCount.exactly(count));
+    }
+
+    public TableQueryAssertion insert(ExpectedCount expected) {
+        expectedCounts.put(QueryType.INSERT, expected);
         return this;
     }
 
     public TableQueryAssertion update(long count) {
-        expectedCounts.put(QueryType.UPDATE, count);
+        return update(ExpectedCount.exactly(count));
+    }
+
+    public TableQueryAssertion update(ExpectedCount expected) {
+        expectedCounts.put(QueryType.UPDATE, expected);
         return this;
     }
 
     public TableQueryAssertion delete(long count) {
-        expectedCounts.put(QueryType.DELETE, count);
+        return delete(ExpectedCount.exactly(count));
+    }
+
+    public TableQueryAssertion delete(ExpectedCount expected) {
+        expectedCounts.put(QueryType.DELETE, expected);
         return this;
     }
 
     public TableQueryAssertion others(long count) {
-        expectedCounts.put(QueryType.OTHERS, count);
+        return others(ExpectedCount.exactly(count));
+    }
+
+    public TableQueryAssertion others(ExpectedCount expected) {
+        expectedCounts.put(QueryType.OTHERS, expected);
         return this;
     }
 
@@ -82,7 +102,7 @@ public class TableQueryAssertion {
         return tableName;
     }
 
-    Map<QueryType, Long> getExpectedCounts() {
+    Map<QueryType, ExpectedCount> getExpectedCounts() {
         return expectedCounts;
     }
 

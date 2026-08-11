@@ -15,7 +15,7 @@ class QueryCountVerifier {
 
     private static final int MAX_VIOLATIONS_TO_REPORT = 3;
 
-    private final Map<QueryType, Long> expectedCounts;
+    private final Map<QueryType, ExpectedCount> expectedCounts;
     private final Map<String, TableQueryAssertion> tableAssertions;
     private final Set<String> tableNames;
     private final Long maxExecutionTimeMs;
@@ -24,7 +24,7 @@ class QueryCountVerifier {
     private List<QueryInfo> cachedQueries;
 
     QueryCountVerifier(
-        Map<QueryType, Long> expectedCounts,
+        Map<QueryType, ExpectedCount> expectedCounts,
         Map<String, TableQueryAssertion> tableAssertions,
         Set<String> tableNames,
         Long maxExecutionTimeMs
@@ -81,10 +81,10 @@ class QueryCountVerifier {
         }
     }
 
-    private String compareCount(QueryType type, long expected, Map<QueryType, Long> actual) {
+    private String compareCount(QueryType type, ExpectedCount expected, Map<QueryType, Long> actual) {
         long actualCount = actual.getOrDefault(type, 0L);
-        if (expected != actualCount) {
-            return String.format("QueryType.%s: expected %d, but was %d", type, expected, actualCount);
+        if (!expected.matches(actualCount)) {
+            return String.format("QueryType.%s: %s, but was %d", type, expected.describe(), actualCount);
         }
         return null;
     }
@@ -106,7 +106,7 @@ class QueryCountVerifier {
 
     private List<String> verifyTableAssertion(TableQueryAssertion assertion) {
         String tableName = assertion.getTableName();
-        Map<QueryType, Long> expected = assertion.getExpectedCounts();
+        Map<QueryType, ExpectedCount> expected = assertion.getExpectedCounts();
 
         EnumMap<QueryType, Long> actualCounts = cachedQueries.stream()
             .filter(q -> q.getTableNames().contains(tableName))
@@ -117,11 +117,11 @@ class QueryCountVerifier {
             ));
 
         List<String> errors = new ArrayList<>();
-        for (Map.Entry<QueryType, Long> entry : expected.entrySet()) {
+        for (Map.Entry<QueryType, ExpectedCount> entry : expected.entrySet()) {
             long actual = actualCounts.getOrDefault(entry.getKey(), 0L);
-            if (!entry.getValue().equals(actual)) {
-                errors.add(String.format("Table '%s' - QueryType.%s: expected %d, but was %d",
-                    tableName, entry.getKey(), entry.getValue(), actual));
+            if (!entry.getValue().matches(actual)) {
+                errors.add(String.format("Table '%s' - QueryType.%s: %s, but was %d",
+                    tableName, entry.getKey(), entry.getValue().describe(), actual));
             }
         }
         return errors;
