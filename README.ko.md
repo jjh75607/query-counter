@@ -155,6 +155,21 @@ Spring 테스트 컨텍스트를 띄우지 않는 테스트라면 `@ExtendWith(Q
 기대값은 `long`이므로 상수뿐 아니라 식도 넘길 수 있습니다. 테스트 데이터의 개수나 파라미터화
 테스트의 케이스에 따라 기대 쿼리 수가 달라지면 그대로 계산해서 지정하면 됩니다.
 
+**상한 검증.** 카운트 메서드는 `ExpectedCount` 도 받습니다. 정확한 값이 아니라 상한을 검증할
+수 있습니다. 구현 세부가 조금 바뀌어도 통과해야 하는 테스트가 여기 해당합니다.
+
+```java
+import static soon.springtestutil.querycount.assertion.ExpectedCount.atMost;
+
+QueryCounterAssertion.assertCounts()
+    .select(atMost(3))                       // 3개 이하면 통과
+    .forTable("member").insert(atMost(1))    // 테이블별 검증에서도 됩니다
+    .verify();
+```
+
+숫자를 그대로 넘기면 종전처럼 정확한 값 검증입니다. `select(3)` 과 `select(exactly(3))` 은
+같습니다.
+
 ##### 예제
 
 ```java
@@ -270,6 +285,13 @@ QueryType.SELECT: expected 3, but was 2
 ```text
 java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}] Table-specific query count assertion failed:
 Table 'member' - QueryType.SELECT: expected 2, but was 1
+```
+
+상한 검증도 같은 형식이고 비교 방식이 문구에 드러납니다.
+
+```text
+java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}] Query count assertion failed:
+QueryType.SELECT: expected at most 2, but was 3
 ```
 
 ```text

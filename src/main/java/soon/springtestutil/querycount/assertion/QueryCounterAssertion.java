@@ -32,7 +32,7 @@ public class QueryCounterAssertion {
     private static final ThreadLocal<List<QueryCounterAssertion>> pending =
         ThreadLocal.withInitial(ArrayList::new);
 
-    private final Map<QueryType, Long> expectedCounts = new EnumMap<>(QueryType.class);
+    private final Map<QueryType, ExpectedCount> expectedCounts = new EnumMap<>(QueryType.class);
     private final Map<String, TableQueryAssertion> tableAssertions = new LinkedHashMap<>();
     private Set<String> tableNames;
     private Long maxExecutionTimeMs;
@@ -77,27 +77,47 @@ public class QueryCounterAssertion {
     }
 
     public QueryCounterAssertion select(long count) {
-        expectedCounts.put(QueryType.SELECT, count);
+        return select(ExpectedCount.exactly(count));
+    }
+
+    public QueryCounterAssertion select(ExpectedCount expected) {
+        expectedCounts.put(QueryType.SELECT, expected);
         return this;
     }
 
     public QueryCounterAssertion insert(long count) {
-        expectedCounts.put(QueryType.INSERT, count);
+        return insert(ExpectedCount.exactly(count));
+    }
+
+    public QueryCounterAssertion insert(ExpectedCount expected) {
+        expectedCounts.put(QueryType.INSERT, expected);
         return this;
     }
 
     public QueryCounterAssertion update(long count) {
-        expectedCounts.put(QueryType.UPDATE, count);
+        return update(ExpectedCount.exactly(count));
+    }
+
+    public QueryCounterAssertion update(ExpectedCount expected) {
+        expectedCounts.put(QueryType.UPDATE, expected);
         return this;
     }
 
     public QueryCounterAssertion delete(long count) {
-        expectedCounts.put(QueryType.DELETE, count);
+        return delete(ExpectedCount.exactly(count));
+    }
+
+    public QueryCounterAssertion delete(ExpectedCount expected) {
+        expectedCounts.put(QueryType.DELETE, expected);
         return this;
     }
 
     public QueryCounterAssertion others(long count) {
-        expectedCounts.put(QueryType.OTHERS, count);
+        return others(ExpectedCount.exactly(count));
+    }
+
+    public QueryCounterAssertion others(ExpectedCount expected) {
+        expectedCounts.put(QueryType.OTHERS, expected);
         return this;
     }
 

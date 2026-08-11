@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static soon.springtestutil.querycount.assertion.ExpectedCount.atMost;
 
 @EnableAutoConfiguration
 @SpringBootTest(classes = AutoConfig.class, properties = "query-counter.enabled=true")
@@ -97,6 +98,93 @@ public class QueryCountAssertionIntegrationTest {
         QueryCounterAssertion.assertCounts()
             .select(1)
             .verify();
+    }
+
+    @Test
+    @DisplayName("atMost 는 상한보다 적게 실행되면 통과한다")
+    void atMostPassesWhenFewerThanUpperBound() {
+        // given
+        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .select(atMost(3))
+            .verify();
+    }
+
+    @Test
+    @DisplayName("atMost 는 상한과 같아도 통과한다")
+    void atMostPassesWhenEqualToUpperBound() {
+        // given
+        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .select(atMost(2))
+            .verify();
+    }
+
+    @Test
+    @DisplayName("atMost 는 상한을 넘으면 실패하고 메시지에 비교 방식이 드러난다")
+    void atMostFailsWhenAboveUpperBoundAndMessageShowsComparison() {
+        // given
+        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+
+        // expected
+        assertThatThrownBy(() -> QueryCounterAssertion.assertCounts()
+            .select(atMost(2))
+            .verify()
+        )
+            .isInstanceOf(AssertionError.class)
+            .hasMessageContaining("QueryType.SELECT: expected at most 2, but was 3");
+    }
+
+    @Test
+    @DisplayName("테이블별 검증에서도 atMost 를 쓸 수 있다")
+    void atMostWorksForTableAssertion() {
+        // given
+        jdbcTemplate.update("INSERT INTO member (id, name) VALUES (1, 'a')");
+        jdbcTemplate.update("INSERT INTO member (id, name) VALUES (2, 'b')");
+
+        // expected
+        QueryCounterAssertion.assertCounts()
+            .forTable("member").insert(atMost(5))
+            .verify();
+    }
+
+    @Test
+    @DisplayName("테이블별 검증에서 atMost 를 넘기면 메시지에 테이블과 비교 방식이 함께 들어간다")
+    void atMostFailureMessageForTableAssertion() {
+        // given
+        jdbcTemplate.update("INSERT INTO member (id, name) VALUES (1, 'a')");
+        jdbcTemplate.update("INSERT INTO member (id, name) VALUES (2, 'b')");
+
+        // expected
+        assertThatThrownBy(() -> QueryCounterAssertion.assertCounts()
+            .forTable("member").insert(atMost(1))
+            .verify()
+        )
+            .isInstanceOf(AssertionError.class)
+            .hasMessageContaining("Table 'member' - QueryType.INSERT: expected at most 1, but was 2");
+    }
+
+    @Test
+    @DisplayName("정확한 값 검증의 실패 메시지는 종전과 같다")
+    void exactCountFailureMessageIsUnchanged() {
+        // given
+        jdbcTemplate.queryForObject("SELECT 1", Integer.class);
+
+        // expected
+        assertThatThrownBy(() -> QueryCounterAssertion.assertCounts()
+            .select(3)
+            .verify()
+        )
+            .isInstanceOf(AssertionError.class)
+            .hasMessageContaining("QueryType.SELECT: expected 3, but was 1");
     }
 
 }

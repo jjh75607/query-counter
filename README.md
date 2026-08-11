@@ -159,6 +159,21 @@ count rather than ten. Expect round trips, not rows.
 Expected values are `long`, so expressions work as well as constants. When the expected number of
 queries depends on the amount of test data or on a parameterized case, compute it.
 
+**Upper bounds.** Every count method also accepts an `ExpectedCount`, so you can assert a ceiling
+instead of an exact number. A test that should keep passing after a small implementation change is
+usually of this kind.
+
+```java
+import static soon.springtestutil.querycount.assertion.ExpectedCount.atMost;
+
+QueryCounterAssertion.assertCounts()
+    .select(atMost(3))                       // three or fewer passes
+    .forTable("member").insert(atMost(1))    // works per table too
+    .verify();
+```
+
+A plain number stays an exact match, so `select(3)` and `select(exactly(3))` are the same.
+
 ##### Examples
 
 ```java
@@ -274,6 +289,13 @@ QueryType.SELECT: expected 3, but was 2
 ```text
 java.lang.AssertionError: [Test: {package}.{class}#{method}] Table-specific query count assertion failed:
 Table 'member' - QueryType.SELECT: expected 2, but was 1
+```
+
+An upper bound reads the same way, with the comparison spelled out:
+
+```text
+java.lang.AssertionError: [Test: {package}.{class}#{method}] Query count assertion failed:
+QueryType.SELECT: expected at most 2, but was 3
 ```
 
 ```text
