@@ -130,6 +130,11 @@ Spring 테스트 컨텍스트를 띄우지 않는 테스트라면 `@ExtendWith(Q
 `@BeforeEach` 나 `given` 블록에서 실행한 쿼리가 함께 셉니다. `when` 블록의 쿼리만 세고 싶으면
 셋업 뒤에 `QueryCountContext.clear()` 를 부르면 됩니다.
 
+**JDBC 배치는 1건으로 셉니다.** `addBatch` 로 쌓고 `executeBatch` 로 보낸 문장은 몇 건을
+쌓았든 1건입니다. 데이터베이스로 나가는 왕복이 한 번이기 때문입니다. `hibernate.jdbc.batch_size`
+를 켠 프로젝트에서는 엔티티 10건을 저장해도 INSERT 카운트가 10이 아니라 1이 될 수 있습니다.
+행 수가 아니라 왕복 횟수를 기대하시면 됩니다.
+
 ### API
 
 ##### 메서드

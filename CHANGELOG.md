@@ -13,6 +13,7 @@
 - README 에 요구 사항 표 추가. Java 17 이상, Spring Boot 3.0 이상이며 4.x 도 지원합니다. CI 가 검증하는 범위와 일치시켰습니다
 - 돌아가는 예제 패키지. `src/test/java/soon/springtestutil/example` 에 JPA 엔티티와 사용 예제 테스트를 두어 README 예제가 실제로 컴파일되고 실행되는지 검증합니다
 - Spotless 로 포맷 검사. 사용하지 않는 import 제거, 뒤 공백 제거, 파일 끝 개행, 들여쓰기 4칸 스페이스만 검사하는 설정입니다. `spotlessCheck` 가 `check` 에 물려 있어 `./gradlew build` 와 CI 가 함께 검사합니다. 라이브러리 동작에는 영향이 없습니다
+- **JDBC 배치가 1건으로 집계된다는 설명을 README 두 벌에 추가했습니다.** `addBatch` 로 쌓고 `executeBatch` 로 보내면 몇 건을 쌓았든 1건입니다. 데이터베이스 왕복이 한 번이기 때문입니다. `hibernate.jdbc.batch_size` 를 켠 프로젝트에서 엔티티 10건을 저장해도 카운트가 1이 되므로 라이브러리가 쿼리를 놓쳤다고 오해하기 쉬웠습니다. 이 동작을 고정하는 테스트도 함께 두었습니다. 집계 방식 자체는 바뀌지 않았습니다
 
 ### Fixed
 - **앞에 주석이 붙거나 CTE 로 시작하는 SQL 이 모두 `OTHERS` 로 분류되던 문제를 고쳤습니다.** 판정 전에 선행 주석(`/* */` 와 `--`)을 벗겨내고, `WITH` 로 시작하면 괄호 밖의 첫 키워드로 판정합니다. `hibernate.use_sql_comments=true` 를 켠 프로젝트는 Hibernate 가 모든 SQL 앞에 주석을 붙이므로 모든 쿼리가 `OTHERS` 가 되어 `select(n)` 을 쓰는 테스트가 전부 0건으로 보였습니다

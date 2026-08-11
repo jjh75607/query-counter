@@ -134,6 +134,11 @@ N+1 problem appearing and then disappearing after a `join fetch`.
 queries issued in `@BeforeEach` or in the `given` block are included. Call
 `QueryCountContext.clear()` after your setup if you want to count only what the `when` block does.
 
+**A JDBC batch counts as one.** Statements sent with `addBatch` and `executeBatch` are counted
+once no matter how many were stacked, because that is one round trip to the database. If your
+project enables `hibernate.jdbc.batch_size`, saving ten entities can produce a single INSERT
+count rather than ten. Expect round trips, not rows.
+
 ### API
 
 ##### Methods
