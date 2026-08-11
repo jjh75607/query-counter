@@ -1,6 +1,9 @@
 package soon.springtestutil.querycount;
 
 import java.util.Arrays;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -17,6 +20,10 @@ public enum QueryType {
     private final String keyword;
 
     private static final String CTE_KEYWORD = "WITH";
+
+    private static final Pattern DATA_CHANGE_DELTA_TABLE_PATTERN = Pattern.compile(
+        "\\bFROM\\s+(?:FINAL|NEW|OLD)\\s+TABLE\\s*\\("
+    );
 
     public static QueryType from(String query) {
         if (query == null) {
@@ -38,10 +45,36 @@ public enum QueryType {
             return fromCteBody(upperQuery);
         }
 
-        return Arrays.stream(values())
-            .filter(type -> type != OTHERS && upperQuery.startsWith(type.keyword))
+        QueryType type = Arrays.stream(values())
+            .filter(candidate -> candidate != OTHERS && upperQuery.startsWith(candidate.keyword))
             .findFirst()
             .orElse(OTHERS);
+
+        if (type == SELECT) {
+            return fromDataChangeDeltaTable(upperQuery).orElse(SELECT);
+        }
+
+        return type;
+    }
+
+    // H2 는 자동 증가 키를 돌려줄 때 select ... from final table (insert ...) 형태를 보낸다.
+    // 왕복은 1회이고 사용자가 의도한 동작은 저장이므로 안쪽 문장의 타입으로 센다.
+    private static Optional<QueryType> fromDataChangeDeltaTable(String upperQuery) {
+        Matcher matcher = DATA_CHANGE_DELTA_TABLE_PATTERN.matcher(upperQuery);
+        if (!matcher.find()) {
+            return Optional.empty();
+        }
+
+        int cursor = matcher.end();
+        while (cursor < upperQuery.length() && Character.isWhitespace(upperQuery.charAt(cursor))) {
+            cursor++;
+        }
+        final int innerStatementStart = cursor;
+
+        return Arrays.stream(values())
+            .filter(candidate -> candidate != OTHERS
+                && matchesKeywordAt(upperQuery, innerStatementStart, candidate.keyword))
+            .findFirst();
     }
 
     // hibernate.use_sql_comments=true 를 켜면 모든 SQL 앞에 주석이 붙는다.

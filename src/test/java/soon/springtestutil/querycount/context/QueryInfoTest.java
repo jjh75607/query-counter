@@ -123,4 +123,46 @@ class QueryInfoTest {
         assertThat(info.getTableNames()).containsExactly("orders", "member", "product");
     }
 
+    @Test
+    @DisplayName("데이터 변경 델타 테이블에서 델타 키워드를 테이블 이름으로 뽑지 않는다")
+    void extractTableNameFromDataChangeDeltaTable() {
+        // given
+        String sql = "select ID from final table (insert into member (name) values ('a'))";
+
+        // when
+        QueryInfo info = new QueryInfo(QueryType.INSERT, sql);
+
+        // then
+        assertThat(info.getTableNames()).containsExactly("member");
+    }
+
+    @Test
+    @DisplayName("old table 과 new table 도 테이블 이름으로 뽑지 않는다")
+    void extractTableNameFromOldAndNewDeltaTable() {
+        // given
+        String oldTableSql = "select ID from old table (update member set name = 'b' where id = 1)";
+        String newTableSql = "select ID from new table (insert into member (name) values ('a'))";
+
+        // when
+        QueryInfo oldTableInfo = new QueryInfo(QueryType.UPDATE, oldTableSql);
+        QueryInfo newTableInfo = new QueryInfo(QueryType.INSERT, newTableSql);
+
+        // then
+        assertThat(oldTableInfo.getTableNames()).containsExactly("member");
+        assertThat(newTableInfo.getTableNames()).containsExactly("member");
+    }
+
+    @Test
+    @DisplayName("final 이라는 이름의 테이블은 그대로 뽑는다")
+    void extractTableNameWhenTableIsActuallyNamedFinal() {
+        // given
+        String sql = "select * from final where id = 1";
+
+        // when
+        QueryInfo info = new QueryInfo(QueryType.SELECT, sql);
+
+        // then
+        assertThat(info.getTableNames()).containsExactly("final");
+    }
+
 }

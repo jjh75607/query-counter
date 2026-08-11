@@ -215,6 +215,57 @@ class QueryTypeTest {
         assertThat(actualType).isEqualTo(QueryType.OTHERS);
     }
 
+    @DisplayName("데이터 변경 델타 테이블은 안쪽 문장의 타입으로 판정한다")
+    @Test
+    void fromDataChangeDeltaTableShouldReturnInnerStatementType() {
+        // given
+        String sql = "select ID from final table (insert into member (name) values ('a'))";
+
+        // when
+        QueryType actualType = QueryType.from(sql);
+
+        // then
+        assertThat(actualType).isEqualTo(QueryType.INSERT);
+    }
+
+    @DisplayName("old table 과 new table 도 안쪽 문장의 타입으로 판정한다")
+    @Test
+    void fromOldAndNewDeltaTableShouldReturnInnerStatementType() {
+        // given
+        String oldTableSql = "select ID from old table (update member set name = 'b' where id = 1)";
+        String newTableSql = "select ID from new table (insert into member (name) values ('a'))";
+
+        // when & then
+        assertThat(QueryType.from(oldTableSql)).isEqualTo(QueryType.UPDATE);
+        assertThat(QueryType.from(newTableSql)).isEqualTo(QueryType.INSERT);
+    }
+
+    @DisplayName("델타 테이블 안이 DELETE 면 DELETE 로 판정한다")
+    @Test
+    void fromDeltaTableWithDeleteShouldReturnDelete() {
+        // given
+        String sql = "select ID from old table (delete from member where id = 1)";
+
+        // when
+        QueryType actualType = QueryType.from(sql);
+
+        // then
+        assertThat(actualType).isEqualTo(QueryType.DELETE);
+    }
+
+    @DisplayName("final 이라는 이름의 테이블을 조회하면 SELECT 로 판정한다")
+    @Test
+    void fromSelectOnTableNamedFinalShouldReturnSelect() {
+        // given
+        String sql = "select * from final where id = 1";
+
+        // when
+        QueryType actualType = QueryType.from(sql);
+
+        // then
+        assertThat(actualType).isEqualTo(QueryType.SELECT);
+    }
+
     @DisplayName("주석만 있고 본문이 없으면 예외가 발생한다")
     @Test
     void fromQueryWithOnlyCommentShouldThrowException() {
