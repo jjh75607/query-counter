@@ -30,6 +30,7 @@ querycount/
   context/QueryInfo                 쿼리 하나의 값 객체. 테이블 이름을 정규식으로 추출
   assertion/QueryCounterAssertion   플루언트 빌더 (전체 대상)
   assertion/TableQueryAssertion     플루언트 빌더 (테이블별)
+  assertion/ExpectedCount           기대값과 비교 방식(정확히 N, N 이하)을 담는 값 객체
   assertion/QueryCountVerifier      실제 비교와 오류 메시지 조립
   extension/QueryCountTestExecutionListener  Spring 테스트용. spring.factories 로 자동 등록
   extension/QueryCountTestExtension          JUnit 확장. Spring 컨텍스트를 띄우지 않는 테스트용
@@ -125,8 +126,9 @@ PR 본문에 배경과 판단을 적으면 이슈에 같은 내용을 한 번 �
 | 메서드 안의 구현 주석 (`//`) | **한국어.** 왜 이렇게 했는지를 적는 자리다 |
 | 테스트 | **한국어.** `@DisplayName` 이 한국어라 영어 주석과 섞으면 읽기 나쁘다 |
 
-공개 API 는 `QueryCounterAssertion`, `TableQueryAssertion`, `QueryCountContext`,
-`QueryCountTestExtension`, `QueryCountTestExecutionListener`, `QueryCounterProperties` 다.
+공개 API 는 `QueryCounterAssertion`, `TableQueryAssertion`, `ExpectedCount`,
+`QueryCountContext`, `QueryCountTestExtension`, `QueryCountTestExecutionListener`,
+`QueryCounterProperties` 다.
 
 ### 다른 저장소의 이슈 번호
 
