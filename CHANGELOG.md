@@ -16,6 +16,7 @@
 - **JDBC 배치가 1건으로 집계된다는 설명을 README 두 벌에 추가했습니다.** `addBatch` 로 쌓고 `executeBatch` 로 보내면 몇 건을 쌓았든 1건입니다. 데이터베이스 왕복이 한 번이기 때문입니다. `hibernate.jdbc.batch_size` 를 켠 프로젝트에서 엔티티 10건을 저장해도 카운트가 1이 되므로 라이브러리가 쿼리를 놓쳤다고 오해하기 쉬웠습니다. 이 동작을 고정하는 테스트도 함께 두었습니다. 집계 방식 자체는 바뀌지 않았습니다
 
 ### Fixed
+- **H2 의 데이터 변경 델타 테이블 문장에서 INSERT 가 세지지 않고 테이블 이름이 `final` 로 뽑히던 문제를 고쳤습니다.** H2 는 자동 증가 키를 돌려줄 때 `select ID from final table (insert into member ...)` 형태를 보내는데, 맨 앞 키워드로 판정해 `SELECT` 1건이 되고 `insert(1)` 을 기대한 테스트가 0건으로 실패했습니다. 왕복이 1회이고 사용자가 의도한 동작은 저장이므로 안쪽 문장의 타입으로 1건을 셉니다. `final table`, `new table`, `old table` 세 형태를 모두 다루며, 테이블 이름도 델타 키워드가 아니라 대상 테이블로 뽑습니다
 - **앞에 주석이 붙거나 CTE 로 시작하는 SQL 이 모두 `OTHERS` 로 분류되던 문제를 고쳤습니다.** 판정 전에 선행 주석(`/* */` 와 `--`)을 벗겨내고, `WITH` 로 시작하면 괄호 밖의 첫 키워드로 판정합니다. `hibernate.use_sql_comments=true` 를 켠 프로젝트는 Hibernate 가 모든 SQL 앞에 주석을 붙이므로 모든 쿼리가 `OTHERS` 가 되어 `select(n)` 을 쓰는 테스트가 전부 0건으로 보였습니다
 - **DataSource 빈이 다른 DataSource 빈을 위임하면 쿼리가 두 번 세지던 문제를 고쳤습니다.** `LazyConnectionDataSourceProxy` 처럼 다른 DataSource 를 감싸는 빈이 있으면 안쪽과 바깥쪽이 모두 감싸져 같은 쿼리가 두 번 기록됐습니다. 위임 대상이 이미 감싸져 있으면 바깥쪽은 감싸지 않도록 했습니다. 서로 위임하지 않는 DataSource 가 둘인 구성에서는 종전대로 양쪽 모두 기록됩니다
 - **DataSource 에 의존하는 다른 `BeanPostProcessor` 가 있으면 쿼리가 하나도 기록되지 않던 문제를 고쳤습니다.** `Ordered` 를 구현하면서 DataSource 를 주입받는 `BeanPostProcessor` 가 있으면 그것을 만드는 과정에서 DataSource 가 먼저 만들어져 감싸지지 않았습니다. 이 라이브러리의 `BeanPostProcessor` 가 `PriorityOrdered` 를 구현하도록 바꿔 항상 먼저 등록되게 했습니다. 증상이 카운트 불일치가 아니라 0건이었고 안내 문구도 원인과 어긋나 있어 찾기 어려운 문제였습니다
