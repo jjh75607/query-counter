@@ -6,16 +6,15 @@
 
 ---
 
-## [Unreleased]
+## [0.2.0] - 2026-08-13
 ### Changed
 - **Maven Central 에서 받을 수 있습니다. 설치 좌표가 `io.github.jjh75607:query-counter:0.2.0` 입니다.** 종전에는 빌드 스크립트에 `maven { url 'https://jitpack.io' }` 를 추가해야 했지만 이제 `mavenCentral()` 만 있으면 됩니다. JitPack 도 계속 지원하며 그쪽 좌표는 `com.github.jjh75607:query-counter:v0.2.0` 로 종전과 같습니다. **같은 라이브러리인데 받는 경로에 따라 groupId 가 다릅니다.** JitPack 이 빌드 파일의 `group` 값을 무시하고 항상 `com.github.<계정>` 으로 서빙하기 때문이며, 남의 네임스페이스로 라이브러리가 올라가는 것을 막으려는 설계입니다. `v0.1.0` 까지의 릴리스는 JitPack 에서만 받을 수 있습니다
 
 ### Added
 - Maven Central 배포 워크플로. GitHub 릴리스를 만들면 아티팩트를 서명해 Central 에 올립니다. 태그와 `build.gradle` 의 `version` 이 다르면 올리기 전에 멈춥니다. Central 은 한 번 올라간 버전을 덮어쓸 수 없기 때문입니다
-- 릴리스 검증 워크플로에 Central 확인을 추가했습니다. POM 좌표, 자동 설정 등록 파일, 서명과 sources, javadoc 이 실제로 올라갔는지 봅니다. Central 은 공개를 손으로 눌러야 하고 반영에 시간이 걸리므로 이 확인은 수동 실행일 때만 돕니다
+- 릴리스 검증 워크플로. 배포 경로 둘을 각각 확인합니다. JitPack 은 릴리스 직후 자동으로 빌드 상태와 산출물, 자동 설정 등록 파일 포함 여부를 봅니다. Central 은 POM 좌표와 등록 파일에 더해 서명과 sources, javadoc 이 실제로 올라갔는지 보며, 공개를 손으로 눌러야 하고 반영에 시간이 걸리므로 수동 실행일 때만 돕니다
 - **쿼리 수 상한 검증을 추가했습니다.** `select(atMost(3))` 처럼 쓰면 3개 이하일 때 통과합니다. `select`, `insert`, `update`, `delete`, `others` 다섯 메서드와 테이블별 검증 모두에서 됩니다. 실무에서는 정확한 쿼리 수보다 상한이 더 자주 필요하고, 구현 세부가 조금 바뀌어도 통과해야 하는 테스트가 많기 때문입니다. 숫자를 그대로 넘기면 종전처럼 정확한 값 검증이라 기존 코드는 그대로 동작합니다. 실패 메시지는 `expected at most 3, but was 5` 로 비교 방식을 함께 밝힙니다
-- CI 워크플로. `master` push 와 PR 에서 Spring Boot 하한(3.0.0)과 기본값 두 조합으로 `./gradlew build` 를 돌립니다
-- 릴리스 검증 워크플로. 릴리스 직후 JitPack 빌드 상태와 산출물, 자동 설정 등록 파일 포함 여부를 확인합니다
+- CI 워크플로. `master` push 와 PR 에서 Spring Boot 네 조합(기본값, 하한 3.0.0, 3.5.16, 4.1.0)으로 `./gradlew build` 를 돌립니다. README 에 적은 지원 범위를 짐작이 아니라 검증된 값으로 유지합니다
 - README 에 요구 사항 표 추가. Java 17 이상, Spring Boot 3.0 이상이며 4.x 도 지원합니다. CI 가 검증하는 범위와 일치시켰습니다
 - 돌아가는 예제 패키지. `src/test/java/soon/springtestutil/example` 에 JPA 엔티티와 사용 예제 테스트를 두어 README 예제가 실제로 컴파일되고 실행되는지 검증합니다
 - Spotless 로 포맷 검사. 사용하지 않는 import 제거, 뒤 공백 제거, 파일 끝 개행, 들여쓰기 4칸 스페이스만 검사하는 설정입니다. `spotlessCheck` 가 `check` 에 물려 있어 `./gradlew build` 와 CI 가 함께 검사합니다. 라이브러리 동작에는 영향이 없습니다
