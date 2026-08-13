@@ -1,8 +1,6 @@
 name: Release
 
 # GitHub 릴리스를 만들면 Maven Central 에 올린다.
-# JitPack 은 여기서 할 일이 없다. 요청받을 때 태그를 스스로 클론해 빌드하기 때문이다.
-# 그쪽 확인은 verify-release.yml 이 맡는다.
 on:
   release:
     types: [published]

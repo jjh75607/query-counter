@@ -1,7 +1,6 @@
 # query-counter
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.jjh75607/query-counter)](https://central.sonatype.com/artifact/io.github.jjh75607/query-counter)
-[![JitPack](https://jitpack.io/v/jjh75607/query-counter.svg)](https://jitpack.io/#jjh75607/query-counter)
 
 [한국어](README.ko.md)
 
@@ -74,27 +73,7 @@ dependencies {
 }
 ```
 
-<details>
-<summary>Installing from JitPack instead</summary>
-
-JitPack is still supported. **Its coordinates differ**, because JitPack always serves artifacts
-under `com.github.<user>` regardless of what the build file declares, so that nobody can publish
-under someone else's namespace. The version is the git tag, so it keeps the leading `v`.
-
-```groovy
-repositories {
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
-}
-
-dependencies {
-    testImplementation("com.github.jjh75607:query-counter:v0.2.0")
-}
-```
-
-Releases up to `v0.1.0` are available from JitPack only. Maven Central starts at `0.2.0`.
-
-</details>
+Maven Central starts at `0.2.0`. Earlier releases were published elsewhere and are not on Central.
 
 ## Configure
 
