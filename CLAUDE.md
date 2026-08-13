@@ -24,13 +24,18 @@ config/
   AutoConfig                        조건부 자동 설정. @Bean 으로 명시
   QueryCounterProperties            yml 프로퍼티. IDE 자동완성 메타데이터의 출처
   DataSourceProxyBeanPostProcessor  DataSource 를 프록시로 감쌈
+  QueryCountedDataSource            이미 감싼 DataSource 를 표시한다. 이중 카운트를 막는 자리
+core/
+  context/TestContextHolder         실패 메시지 앞에 붙는 테스트 이름
 querycount/
+  QueryType                         SELECT, INSERT, UPDATE, DELETE, OTHERS. SQL 로 판정한다
   datasource/QueryCountListener     datasource-proxy 리스너. 여기서 기록이 시작된다
   context/QueryCountContext         ThreadLocal 수집소
-  context/QueryInfo                 쿼리 하나의 값 객체. 테이블 이름을 정규식으로 추출
+  context/QueryInfo                 쿼리 하나의 값 객체. 테이블 이름과 바인딩 파라미터를 담는다
   assertion/QueryCounterAssertion   플루언트 빌더 (전체 대상)
   assertion/TableQueryAssertion     플루언트 빌더 (테이블별)
   assertion/ExpectedCount           기대값과 비교 방식(정확히 N, N 이하)을 담는 값 객체
+  assertion/NPlusOneDetector        같은 SELECT 가 다른 파라미터로 반복됐는지 찾는다
   assertion/QueryCountVerifier      실제 비교와 오류 메시지 조립
   extension/QueryCountTestExecutionListener  Spring 테스트용. spring.factories 로 자동 등록
   extension/QueryCountTestExtension          JUnit 확장. Spring 컨텍스트를 띄우지 않는 테스트용
@@ -65,8 +70,8 @@ querycount/
 |---|---|
 | `QueryCountListener` | `queryTypeCache` 가 SQL 문자열 키의 static 맵인데 비워지지 않는다 |
 | `QueryCountListener` | `elapsedMs` 가 실행 단위 값인데 배치의 모든 쿼리에 같은 값이 붙는다 |
-| `QueryInfo` | 생성자가 테이블 이름을 항상 정규식으로 추출한다. 안 쓰는 경우에도 |
-| `QueryCountVerifier` | 229줄에 private 메서드 13개. 검사를 하나 더 추가하기 전에 검사 단위를 인터페이스로 뽑는 편이 낫다 |
+| `QueryInfo` | 생성자가 테이블 이름을 항상 정규식으로 추출하고 파라미터도 항상 들고 있다. 안 쓰는 경우에도 그렇다. 이 자리를 다시 건드리면 둘을 함께 지연 계산으로 바꾼다 |
+| `QueryCountVerifier` | 292줄에 private 메서드 15개. N+1 검출은 `NPlusOneDetector` 로 뺐지만 조립 메서드가 늘어 전체는 커졌다. 검사를 더 추가하기 전에 검사 단위를 인터페이스로 뽑는다 |
 | `QueryCounterAssertion` | 검증하지 않은 어서션을 static ThreadLocal 목록으로 들고 있다. 리스너가 비우지만 전역 상태가 하나 늘어난 것은 사실이다 |
 
 ## 작업 규칙
@@ -122,7 +127,7 @@ PR 본문에 배경과 판단을 적으면 이슈에 같은 내용을 한 번 �
 |---|---|
 | 공개 API 의 Javadoc | **영어.** 사용자가 IDE 자동완성과 Javadoc 에서 본다 |
 | `QueryCounterProperties` 의 프로퍼티 설명 | **영어.** IDE 자동완성 메타데이터로 나간다 |
-| 내부 클래스의 Javadoc | **한국어.** `AutoConfig`, `DataSourceProxyBeanPostProcessor`, `QueryCountVerifier` |
+| 내부 클래스의 Javadoc | **한국어.** `AutoConfig`, `DataSourceProxyBeanPostProcessor`, `QueryCountVerifier`, `NPlusOneDetector` |
 | 메서드 안의 구현 주석 (`//`) | **한국어.** 왜 이렇게 했는지를 적는 자리다 |
 | 테스트 | **한국어.** `@DisplayName` 이 한국어라 영어 주석과 섞으면 읽기 나쁘다 |
 
