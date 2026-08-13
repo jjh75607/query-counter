@@ -1,15 +1,21 @@
 name: Verify Release
 
+# 배포 경로가 둘이라 확인도 둘이다.
+#
 # JitPack 은 배포받는 것이 아니라 요청받을 때 태그를 클론해 빌드한다.
 # 그래서 아무도 요청하지 않으면 릴리스가 깨진 것을 아무도 모른다.
 # 릴리스 직후 한 번 요청해 빌드가 되는지 확인한다.
+#
+# Maven Central 은 올린 뒤 포털에서 Publish 를 눌러야 공개되고, 눌러도 검색에 반영되기까지
+# 시간이 걸린다. 릴리스 시점에는 아직 없는 것이 정상이라 자동으로 돌리면 늘 실패한다.
+# 그래서 Central 확인은 수동 실행일 때만 돈다. 공개를 누른 뒤에 이 워크플로를 손으로 돌린다.
 on:
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: '검증할 태그 (예: v0.1.0)'
+        description: '검증할 태그 (예: v0.2.0)'
         required: true
 
 jobs:
@@ -67,3 +73,57 @@ jobs:
           test "$STATUS" = "ok" || exit 1
         env:
           TAG: ${{ steps.tag.outputs.value }}
+
+  verify-central:
+    name: Verify Maven Central artifact
+    runs-on: ubuntu-latest
+    # 공개를 누른 뒤에 손으로 돌리는 확인이다. 릴리스 직후에는 아직 올라가지 않았다.
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      # Central 의 버전에는 v 가 없다. 태그 v0.2.0 은 0.2.0 이다.
+      - name: Resolve version
+        id: version
+        run: echo "value=${GITHUB_REF_TAG#v}" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_REF_TAG: ${{ github.event.inputs.tag }}
+
+      - name: Download the POM and the jar
+        run: |
+          VERSION='${{ steps.version.outputs.value }}'
+          BASE="https://repo1.maven.org/maven2/io/github/jjh75607/query-counter/$VERSION"
+          curl -sS -f --max-time 120 -o pom.xml "$BASE/query-counter-$VERSION.pom"
+          curl -sS -f --max-time 120 -o library.jar "$BASE/query-counter-$VERSION.jar"
+          test -s library.jar || { echo "jar 가 비어 있다"; exit 1; }
+
+      - name: Check POM coordinates
+        run: |
+          VERSION='${{ steps.version.outputs.value }}'
+          grep -q "<groupId>io.github.jjh75607</groupId>" pom.xml \
+            || { echo "groupId 가 io.github.jjh75607 이 아니다"; cat pom.xml; exit 1; }
+          grep -q "<artifactId>query-counter</artifactId>" pom.xml \
+            || { echo "artifactId 가 query-counter 가 아니다"; cat pom.xml; exit 1; }
+          grep -q "<version>$VERSION</version>" pom.xml \
+            || { echo "version 이 $VERSION 이 아니다"; cat pom.xml; exit 1; }
+
+      # 자동 설정과 리스너 등록 파일이 빠지면 라이브러리가 조용히 아무것도 하지 않는다.
+      - name: Check the jar contains the wiring files
+        run: |
+          unzip -l library.jar > listing.txt
+          for entry in \
+            "META-INF/spring.factories" \
+            "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports" \
+            "META-INF/spring-configuration-metadata.json"
+          do
+            grep -q "$entry" listing.txt || { echo "빠짐: $entry"; cat listing.txt; exit 1; }
+          done
+
+      - name: Check the signature, sources and javadoc are published
+        run: |
+          VERSION='${{ steps.version.outputs.value }}'
+          BASE="https://repo1.maven.org/maven2/io/github/jjh75607/query-counter/$VERSION"
+          for suffix in ".jar.asc" "-sources.jar" "-javadoc.jar"; do
+            curl -sS -f --max-time 120 -o /dev/null \
+              "$BASE/query-counter-$VERSION$suffix" \
+              || { echo "빠짐: query-counter-$VERSION$suffix"; exit 1; }
+          done
