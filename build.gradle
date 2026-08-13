@@ -4,19 +4,20 @@ plugins {
     id 'java-library'
     id 'org.springframework.boot' version '3.5.0'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'maven-publish'
+    id 'com.vanniktech.maven.publish' version '0.37.0'
     id 'com.diffplug.spotless' version '8.9.0'
 }
 
-group = 'com.github.jjh75607'
-version = '0.1.0'
+// com.github.* 는 Central 네임스페이스를 받을 수 없다. JitPack 은 이 값을 무시한다.
+group = 'io.github.jjh75607'
+version = '0.2.0'
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
-    withSourcesJar()
-    withJavadocJar()
+    // withSourcesJar 와 withJavadocJar 를 여기 두지 않는다. 배포 플러그인이 만드는 것과
+    // 파일 이름이 겹쳐 publishToMavenLocal 이 실패한다.
 }
 
 configurations {
@@ -60,12 +61,45 @@ wrapper {
     distributionType = Wrapper.DistributionType.ALL
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
+mavenPublishing {
+    publishToMavenCentral()
+
+    // 조건을 걷어내면 JitPack 이 죽는다. signAllPublications 는 정식 버전에서 서명을 필수로
+    // 만드는데 JitPack 빌드 머신에는 GPG 키가 없다.
+    if (providers.gradleProperty('signingInMemoryKey').present) {
+        signAllPublications()
+    }
+
+    pom {
+        name = 'query-counter'
+        description = 'A test library for asserting how many queries a Spring test executes, and how long they take.'
+        inceptionYear = '2025'
+        url = 'https://github.com/jjh75607/query-counter'
+        licenses {
+            license {
+                name = 'The Apache License, Version 2.0'
+                url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                distribution = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+            }
+        }
+        developers {
+            developer {
+                id = 'jjh75607'
+                name = 'jjh75607'
+                url = 'https://github.com/jjh75607'
+            }
+        }
+        scm {
+            url = 'https://github.com/jjh75607/query-counter'
+            connection = 'scm:git:git://github.com/jjh75607/query-counter.git'
+            developerConnection = 'scm:git:ssh://git@github.com/jjh75607/query-counter.git'
         }
     }
+}
+
+// 배포 태스크에만 물려 있어서 붙인다. 없으면 javadoc 이 깨져도 릴리스 때까지 모른다.
+tasks.named('assemble') {
+    dependsOn 'sourcesJar', 'plainJavadocJar'
 }
 
 dependencies {

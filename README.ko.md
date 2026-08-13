@@ -1,5 +1,6 @@
 # query-counter
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.jjh75607/query-counter)](https://central.sonatype.com/artifact/io.github.jjh75607/query-counter)
 [![JitPack](https://jitpack.io/v/jjh75607/query-counter.svg)](https://jitpack.io/#jjh75607/query-counter)
 
 [English](README.md)
@@ -59,7 +60,24 @@ JDBC 배치 검증, `LIKE '%...'`나 바인드 파라미터 없는 쿼리 같은
 
 ## 설치
 
-`build.gradle`에 의존성을 추가해주세요.
+`build.gradle`에 의존성을 추가해주세요. `mavenCentral()` 외에 더 필요한 것은 없습니다.
+
+```groovy
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation("io.github.jjh75607:query-counter:0.2.0")
+}
+```
+
+<details>
+<summary>JitPack 으로 받으려면</summary>
+
+JitPack 도 계속 지원합니다. 다만 **좌표가 다릅니다.** JitPack 은 빌드 파일에 무엇이 적혀
+있든 항상 `com.github.<계정>` 으로 서빙합니다. 남의 네임스페이스로 라이브러리가 올라가는 것을
+막으려는 설계입니다. 버전도 git 태그 그대로라 앞에 `v` 가 붙습니다.
 
 ```groovy
 repositories {
@@ -68,10 +86,13 @@ repositories {
 }
 
 dependencies {
-    // 최신 버전은 상단의 JitPack 배지 참고
-    testImplementation("com.github.jjh75607:query-counter:v0.0.6")
+    testImplementation("com.github.jjh75607:query-counter:v0.2.0")
 }
 ```
+
+`v0.1.0` 까지의 릴리스는 JitPack 에서만 받을 수 있습니다. Maven Central 은 `0.2.0` 부터입니다.
+
+</details>
 
 ## 설정
 

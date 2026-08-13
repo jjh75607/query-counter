@@ -1,7 +1,7 @@
 # query-counter
 
 Hibernate로 실행되는 쿼리 수와 실행 시간을 테스트에서 검증하는 라이브러리.
-JitPack으로 배포한다.
+Maven Central 로 배포하고 JitPack 도 함께 지원한다.
 
 ## 이 라이브러리가 반드시 지켜야 할 것
 
@@ -182,14 +182,45 @@ checkstyle 은 없다.
 
 ## 릴리스
 
-JitPack은 **배포하는 것이 아니라 요청받을 때 태그를 클론해 빌드한다.**
-따라서 git 태그와 GitHub 릴리스를 만들면 릴리스가 끝난 것이고 따로 올릴 것이 없다.
+**배포 경로가 둘이고 좌표가 서로 다르다.** 같은 태그에서 나온 같은 라이브러리인데 받는 쪽이
+쓰는 groupId 가 다르다. JitPack 이 빌드 파일의 `group` 값을 무시하고 항상 `com.github.<계정>`
+으로 서빙하기 때문이다. 남의 네임스페이스로 라이브러리가 올라가는 것을 막으려는 설계라 이쪽에서
+바꿀 수 없다. README 두 벌이 이 사실을 밝히고 있으니 좌표를 고치면 그쪽도 함께 고친다.
 
-- 설치 좌표는 `com.github.jjh75607:query-counter:<태그>`
-- 릴리스 제목은 태그와 정확히 같게 쓴다 (`v0.0.6`. `v.0.0.6` 처럼 점이 끼지 않게)
-- `CHANGELOG.md`는 Keep a Changelog 형식이고 버전별로 기록한다
-- 릴리스 후 `https://jitpack.io/api/builds/com.github.jjh75607/query-counter` 로
-  빌드 상태를 확인한다
+| 경로 | 좌표 | 기준 |
+|---|---|---|
+| Maven Central | `io.github.jjh75607:query-counter:0.2.0` | 기본 설치 방법. 버전에 `v` 가 없다 |
+| JitPack | `com.github.jjh75607:query-counter:v0.2.0` | `0.1.0` 까지는 이쪽에만 있다. 버전이 태그 그대로다 |
+
+JitPack 은 **배포하는 것이 아니라 요청받을 때 태그를 클론해 빌드한다.** 그래서 태그만 있으면
+따로 올릴 것이 없다. Central 은 반대로 올려야 하고, 올린 다음 손으로 공개해야 한다.
+
+절차는 이렇다.
+
+1. `build.gradle` 의 `version` 을 올리고 `CHANGELOG.md` 를 정리한다
+2. 태그와 GitHub 릴리스를 만든다. 제목은 태그와 정확히 같게 쓴다 (`v0.2.0`. `v.0.2.0` 처럼
+   점이 끼지 않게)
+3. `release.yml` 이 자동으로 돌아 서명한 아티팩트를 Central 에 올린다. 태그와
+   `build.gradle` 의 `version` 이 다르면 여기서 멈춘다. Central 은 한 번 올라간 버전을
+   덮어쓸 수 없어서 올리기 전에 걸러야 한다
+4. `https://central.sonatype.com/publishing/deployments` 에서 확인하고 Publish 를 누른다.
+   이걸 누르기 전에는 아무도 받을 수 없다
+5. `verify-release.yml` 을 태그를 넣어 수동 실행한다. JitPack 과 Central 양쪽을 확인한다.
+   릴리스 직후 자동 실행분은 JitPack 만 본다. 그 시점에는 Central 이 아직 공개되지 않았다
+
+**`build.gradle` 의 `version` 이 유일한 출처다.** 태그는 거기에 `v` 를 붙인 것이고,
+워크플로가 둘이 같은지 검사한다.
+
+### 서명
+
+Central 은 서명 없는 아티팩트를 받지 않는다. 서명 키는 저장소 시크릿 `SIGNING_KEY` 와
+`SIGNING_PASSWORD` 에, 포털 사용자 토큰은 `MAVEN_CENTRAL_USERNAME` 과
+`MAVEN_CENTRAL_PASSWORD` 에 있다.
+
+`build.gradle` 이 `signAllPublications()` 를 **서명 키 프로퍼티가 있을 때만** 부르는 것이
+중요하다. 이 메서드는 버전이 `-SNAPSHOT` 으로 끝나지 않으면 서명을 필수로 만드는데, JitPack
+빌드 머신에는 GPG 키가 없다. 조건을 걷어내면 JitPack 이 도는 `publishToMavenLocal` 이 서명
+단계에서 실패해 JitPack 경로가 통째로 죽는다.
 
 ## 하지 않을 것
 
