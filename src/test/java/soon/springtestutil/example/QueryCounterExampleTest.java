@@ -110,6 +110,38 @@ class QueryCounterExampleTest {
             .verify();
     }
 
+    @DisplayName("N+1 이 있으면 noNPlusOne 이 실패시킨다")
+    @Test
+    void noNPlusOneDetectsLazyLoading() {
+        // given
+        saveMembersInSeparateTeams(3);
+        QueryCountContext.clear();
+
+        // when - 회원을 읽고 각자의 팀 이름을 꺼낸다
+        memberRepository.findAllLazily().forEach(member -> member.getTeam().getName());
+
+        // then - 기대 쿼리 수를 손으로 계산하지 않아도 된다
+        assertThatThrownBy(() -> QueryCounterAssertion.assertCounts().noNPlusOne().verify())
+            .isInstanceOf(AssertionError.class)
+            .hasMessageContaining("N+1 assertion failed");
+    }
+
+    @DisplayName("join fetch 로 N+1 을 없애면 noNPlusOne 이 통과한다")
+    @Test
+    void noNPlusOnePassesWithJoinFetch() {
+        // given
+        saveMembersInSeparateTeams(3);
+        QueryCountContext.clear();
+
+        // when
+        memberRepository.findAllWithTeam().forEach(member -> member.getTeam().getName());
+
+        // then
+        QueryCounterAssertion.assertCounts()
+            .noNPlusOne()
+            .verify();
+    }
+
     @DisplayName("join fetch 로 팀을 함께 읽으면 회원이 몇 명이든 조회가 한 번이다")
     @Test
     void joinFetchAvoidsNPlusOne() {
