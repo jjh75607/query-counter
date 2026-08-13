@@ -6,7 +6,7 @@
 
 ---
 
-## [Unreleased]
+## [0.2.1] - 2026-08-13
 ### Fixed
 - **Gradle 로 설치하면 의존성 해석이 실패하던 문제를 고쳤습니다.** 발행된 아티팩트에 `spring-test`, `junit-jupiter-api`, `spring-boot-starter` 세 개의 버전이 비어 있어서 `Could not find org.springframework:spring-test:` 로 빌드가 멈췄습니다. 버전을 빌드 시점에만 채워주는 플러그인을 쓰고 있어서 발행물에는 아무 값도 남지 않았습니다. 이제 지원 하한인 Spring Boot 3.0.0 기준 버전을 직접 적습니다. 이미 Spring Boot 를 쓰는 프로젝트에서는 그쪽 버전이 그대로 유지되고, 아무 설정이 없는 프로젝트만 하한을 받습니다. `0.2.0` 이하는 모두 이 문제가 있으므로 `0.2.1` 이상을 쓰셔야 합니다
 
