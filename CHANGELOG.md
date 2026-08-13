@@ -6,6 +6,10 @@
 
 ---
 
+## [Unreleased]
+### Removed
+- **JitPack 배포를 접었습니다.** 이제 Maven Central 하나로만 배포합니다. 이미 나간 태그는 그대로 두므로 `v0.2.0` 이하를 JitPack 으로 받고 계셨다면 계속 받을 수 있지만, 앞으로 나올 버전은 JitPack 에서 빌드되지 않습니다. `io.github.jjh75607:query-counter` 로 옮기시면 됩니다. 배포 경로가 둘이면 서명 설정과 문서와 검증이 모두 두 벌이 되는데, 태그 7개 중 JitPack 이 빌드한 것이 둘뿐이라 그 값을 치를 이유가 없었습니다. JitPack 은 요청받을 때만 빌드하므로 나머지 다섯은 아무도 받아간 적이 없다는 뜻입니다
+
 ## [0.2.0] - 2026-08-13
 ### Changed
 - **Maven Central 에서 받을 수 있습니다. 설치 좌표가 `io.github.jjh75607:query-counter:0.2.0` 입니다.** 종전에는 빌드 스크립트에 `maven { url 'https://jitpack.io' }` 를 추가해야 했지만 이제 `mavenCentral()` 만 있으면 됩니다. JitPack 도 계속 지원하며 그쪽 좌표는 `com.github.jjh75607:query-counter:v0.2.0` 로 종전과 같습니다. **같은 라이브러리인데 받는 경로에 따라 groupId 가 다릅니다.** JitPack 이 빌드 파일의 `group` 값을 무시하고 항상 `com.github.<계정>` 으로 서빙하기 때문이며, 남의 네임스페이스로 라이브러리가 올라가는 것을 막으려는 설계입니다. `v0.1.0` 까지의 릴리스는 JitPack 에서만 받을 수 있습니다

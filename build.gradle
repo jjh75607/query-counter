@@ -8,7 +8,7 @@ plugins {
     id 'com.diffplug.spotless' version '8.9.0'
 }
 
-// com.github.* 는 Central 네임스페이스를 받을 수 없다. JitPack 은 이 값을 무시한다.
+// com.github.* 는 github.com 소유자가 아니면 Central 네임스페이스를 받을 수 없다.
 group = 'io.github.jjh75607'
 version = '0.2.0'
 
@@ -64,11 +64,8 @@ wrapper {
 mavenPublishing {
     publishToMavenCentral()
 
-    // 조건을 걷어내면 JitPack 이 죽는다. signAllPublications 는 정식 버전에서 서명을 필수로
-    // 만드는데 JitPack 빌드 머신에는 GPG 키가 없다.
-    if (providers.gradleProperty('signingInMemoryKey').present) {
-        signAllPublications()
-    }
+    // 서명 키가 없으면 publishToMavenLocal 도 실패한다. -PsigningInMemoryKey 로 넘긴다.
+    signAllPublications()
 
     pom {
         name = 'query-counter'
