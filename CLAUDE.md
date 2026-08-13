@@ -203,6 +203,24 @@ JitPack 으로 내던 시절의 것이고 2026-08-13 에 그 경로를 접었다
 **`build.gradle` 의 `version` 이 유일한 출처다.** 태그는 거기에 `v` 를 붙인 것이고,
 워크플로가 둘이 같은지 검사한다. Central 버전에는 `v` 가 없다.
 
+### 의존성 버전은 반드시 적는다
+
+`build.gradle` 의 `springBootFloor`, `springFrameworkFloor`, `junitFloor` 는 **발행물에
+그대로 실려 사용자에게 나가는 값**이다. 지원 하한인 Spring Boot 3.0.0 이 쓰는 버전이다.
+
+버전을 비워두고 BOM 으로 채우는 방식은 쓰지 않는다. 그 방식은 우리가 빌드할 때만 값을
+채우고 발행물에는 빈칸을 남긴다. 받는 쪽은 몇 번을 받을지 몰라 `Could not find
+org.springframework:spring-test:` 로 멈춘다. `0.2.0` 이하가 전부 이 상태로 나갔고
+아무도 설치할 수 없었다. 이슈 98 이다.
+
+하한이어야 하는 이유는, 사용자가 이미 더 높은 Spring Boot 를 쓰고 있으면 그쪽이 이겨야
+하기 때문이다. 우리가 빌드한 버전을 적으면 남의 프로젝트 버전을 끌어올린다.
+
+CI 가 `-PspringBootVersion` 으로 지원 범위를 검증하는 것은 `enforcedPlatform` 이 맡는다.
+`compileOnly`, `annotationProcessor`, `testImplementation` 에만 걸어서 발행물에 새지 않게
+했다. `io.spring.dependency-management` 플러그인으로는 이게 안 된다. 그 플러그인은 명시한
+버전을 덮어쓰지 못한다.
+
 ### 서명
 
 Central 은 서명 없는 아티팩트를 받지 않는다. 서명 키는 저장소 시크릿 `SIGNING_KEY` 와

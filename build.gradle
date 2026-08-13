@@ -1,22 +1,18 @@
-import org.springframework.boot.gradle.plugin.SpringBootPlugin
-
 plugins {
     id 'java-library'
-    id 'org.springframework.boot' version '3.5.0'
-    id 'io.spring.dependency-management' version '1.1.7'
     id 'com.vanniktech.maven.publish' version '0.37.0'
     id 'com.diffplug.spotless' version '8.9.0'
 }
 
 // com.github.* 는 github.com 소유자가 아니면 Central 네임스페이스를 받을 수 없다.
 group = 'io.github.jjh75607'
-version = '0.2.0'
+version = '0.2.1'
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
-    // withSourcesJar 와 withJavadocJar 를 여기 두지 않는다. 배포 플러그인이 만드는 것과
+    // withSourcesJar 와 withJavadocJar 는 두지 않는다. 배포 플러그인이 만드는 것과
     // 파일 이름이 겹쳐 publishToMavenLocal 이 실패한다.
 }
 
@@ -30,19 +26,14 @@ repositories {
     mavenCentral()
 }
 
-// CI 에서 -PspringBootVersion 으로 지원 범위를 검증한다. 지정하지 않으면 플러그인 기본값을 쓴다.
-def springBootVersion = findProperty('springBootVersion')
+// 발행물에 그대로 실려 나간다. 비워두면 사용자가 설치할 수 없다. 이슈 #98 이다.
+// 하한이라야 사용자가 쓰는 더 높은 버전이 이긴다.
+def springBootFloor = '3.0.0'
+def springFrameworkFloor = '6.0.2'
+def junitFloor = '5.9.1'
 
-dependencyManagement {
-    imports {
-        if (springBootVersion) {
-            mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
-        }
-        else {
-            mavenBom SpringBootPlugin.BOM_COORDINATES
-        }
-    }
-}
+// CI 가 -PspringBootVersion 으로 지원 범위를 검증한다.
+def springBootForBuild = findProperty('springBootVersion') ?: '3.5.0'
 
 // 지금 스타일을 고정하는 것이 목적이다. 재포맷하지 않는다.
 // spring-javaformat 은 들여쓰기가 탭이라 저장소 전체가 바뀌므로 쓰지 않는다.
@@ -100,41 +91,35 @@ tasks.named('assemble') {
 }
 
 dependencies {
-    // junit
-    api 'org.junit.jupiter:junit-jupiter-api'
-
-    // Spring
-    implementation 'org.springframework.boot:spring-boot-starter'
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    api "org.junit.jupiter:junit-jupiter-api:${junitFloor}"
 
     // Spring TestContext. TestExecutionListener 등록에 필요하다.
     // 이 라이브러리를 쓰는 쪽은 이미 테스트 클래스패스에 갖고 있다.
-    api 'org.springframework:spring-test'
+    api "org.springframework:spring-test:${springFrameworkFloor}"
 
-    // datasource-proxy
+    implementation "org.springframework.boot:spring-boot-starter:${springBootFloor}"
     implementation 'net.ttddyy:datasource-proxy:1.10.1'
 
-    // lombok
+    // enforcedPlatform 이라 위에 적은 하한을 덮어쓴다. 셋 다 발행되지 않는 구성이다.
+    def bootBom = "org.springframework.boot:spring-boot-dependencies:${springBootForBuild}"
+    compileOnly enforcedPlatform(bootBom)
+    annotationProcessor enforcedPlatform(bootBom)
+    testImplementation enforcedPlatform(bootBom)
+
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    // test
+    // 빠지면 테스트를 하나도 못 찾고 엔진 버전이 어긋났다는 엉뚱한 메시지가 나온다.
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-jdbc'
     testImplementation 'com.h2database:h2'
 
     // example 패키지의 JPA 예제용. testImplementation 이라 소비자에게 전이되지 않는다.
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-
-}
-
-bootJar {
-    enabled = false
-}
-
-jar {
-    enabled = true
-    archiveClassifier = ''
 }
 
 tasks.named('test') {

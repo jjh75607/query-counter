@@ -67,11 +67,11 @@ repositories {
 }
 
 dependencies {
-    testImplementation("io.github.jjh75607:query-counter:0.2.0")
+    testImplementation("io.github.jjh75607:query-counter:0.2.1")
 }
 ```
 
-Maven Central 은 `0.2.0` 부터입니다. 그 이전 릴리스는 다른 곳으로 배포했던 것이라 Central 에
+Maven Central 은 `0.2.1` 부터 쓰실 수 있습니다. `0.2.0` 은 의존성 버전이 비어 있어 Gradle 로 해석되지 않습니다.
 없습니다.
 
 ## 설정
