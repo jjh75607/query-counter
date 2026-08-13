@@ -15,12 +15,14 @@ N+1 문제와 슬로우 쿼리를 배포 후가 아니라 테스트를 쓰는 �
 - **런타임에 계산한 기대값.** 기대값이 `long`이라 `select(members.size() + 1)`이 그대로 됩니다.
   애노테이션은 값이 컴파일 시점에 고정되어야 하므로 테스트 데이터나 파라미터화 케이스에 따라
   달라지는 기대값을 표현할 수 없습니다.
+- **세지 않고 N+1 잡기.** `noNPlusOne()`은 같은 SELECT가 서로 다른 파라미터 값으로 반복되면
+  실패시킵니다. 테스트 데이터가 몇 건인지 몰라도 됩니다.
 
 #### 하지 않는 것
 
 이건 좁은 도구입니다. [QuickPerf](https://github.com/quick-perf/quickperf)가 같은 영역을 훨씬
-넓게 다루며, 아래는 QuickPerf에만 있습니다. N+1 직접 탐지, 조회하거나 수정한 컬럼 단위 검증,
-JDBC 배치 검증, `LIKE '%...'`나 바인드 파라미터 없는 쿼리 같은 안티패턴 금지, JVM 프로파일링입니다.
+넓게 다루며, 아래는 QuickPerf에만 있습니다. 조회하거나 수정한 컬럼 단위 검증, JDBC 배치 검증,
+`LIKE '%...'`나 바인드 파라미터 없는 쿼리 같은 안티패턴 금지, JVM 프로파일링입니다.
 
 테이블 단위 카운트나 런타임 계산 기대값을 플루언트 어서션으로 쓰고 싶으면 query-counter를,
 넓은 범위가 필요하면 QuickPerf를 고르시면 됩니다.
@@ -151,6 +153,7 @@ Spring 테스트 컨텍스트를 띄우지 않는 테스트라면 `@ExtendWith(Q
 | `delete(long expected)` | DELETE 쿼리 실행 횟수 |
 | `others(long expected)` | 나머지 쿼리 실행 횟수 |
 | `maxExecutionTimeMs(long ms)` | 개별 쿼리가 이 시간을 넘기면 실패 |
+| `noNPlusOne()` | 같은 SELECT가 서로 다른 파라미터 값으로 실행되면 실패 |
 | `verify()` | 지금 검증합니다. 선택 사항이며, 검증하지 않은 어서션은 테스트 후 자동으로 검사됩니다 |
 
 기대값은 `long`이므로 상수뿐 아니라 식도 넘길 수 있습니다. 테스트 데이터의 개수나 파라미터화
@@ -170,6 +173,23 @@ QueryCounterAssertion.assertCounts()
 
 숫자를 그대로 넘기면 종전처럼 정확한 값 검증입니다. `select(3)` 과 `select(exactly(3))` 은
 같습니다.
+
+**N+1 잡기.** `noNPlusOne()` 은 하나의 SELECT가 서로 다른 파라미터 값으로 두 번 이상 실행되면
+실패시킵니다. 부모 한 건마다 자식을 한 번씩 읽은 모양이 곧 N+1입니다.
+
+```java
+QueryCounterAssertion.assertCounts()
+    .noNPlusOne()
+    .verify();
+```
+
+`select(1 + members.size())` 와 달리 테스트 데이터가 몇 건인지 몰라도 됩니다.
+
+파라미터 값까지 **같은** 반복은 실패시키지 않습니다. 그건 중복 조회이지 N+1이 아닙니다.
+JDBC 배치로 나간 문장도 왕복이 한 번이라 대상이 아닙니다.
+
+임계값은 없습니다. 값이 다른 반복이 하나라도 있으면 실패입니다. 몇 번까지 허용하고 싶으면
+`select(atMost(n))` 을 쓰시면 됩니다. `forTables` 를 지정하면 그 테이블의 쿼리만 봅니다.
 
 ##### 예제
 
@@ -274,6 +294,7 @@ void 케이스마다_기대값이_다른_경우(int count) {
 
 - 예상과 실제 쿼리 횟수가 다르면 `AssertionError`가 발생합니다.
 - `maxExecutionTimeMs`를 초과하는 쿼리가 있으면 `AssertionError`가 발생합니다.
+- `noNPlusOne()` 이 파라미터가 다른 SELECT 반복을 찾으면 `AssertionError`가 발생합니다.
 - 어긋난 항목을 모두 모아 한 번에 보고하므로 하나씩 고쳐가며 발견하지 않아도 됩니다.
 
 #### 에러 메시지 형식
@@ -299,6 +320,17 @@ QueryType.SELECT: expected at most 2, but was 3
 java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}]
 Query execution time assertion failed: max=100ms, violations=1
 [1] 120ms > 100ms, type=SELECT, SQL: SELECT * FROM member
+```
+
+N+1 실패는 반복된 문장과 서로 달랐던 값을 함께 보여줍니다. 어떤 연관을 함께 읽어야 하는지
+바로 보입니다.
+
+```text
+java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}]
+N+1 assertion failed: 1 query shape ran with different parameter values
+[1] 3 executions, 3 distinct parameter values
+    SQL: select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+    params: [1], [2], [3]
 ```
 
 검증이 실패했는데 기록된 쿼리가 하나도 없으면 안내가 덧붙습니다. 대개 설정을 빠뜨린 경우입니다.

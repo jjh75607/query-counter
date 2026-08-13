@@ -19,6 +19,7 @@ class QueryCountVerifier {
     private final Map<String, TableQueryAssertion> tableAssertions;
     private final Set<String> tableNames;
     private final Long maxExecutionTimeMs;
+    private final boolean noNPlusOne;
 
     // 캐싱된 쿼리 목록
     private List<QueryInfo> cachedQueries;
@@ -27,12 +28,14 @@ class QueryCountVerifier {
         Map<QueryType, ExpectedCount> expectedCounts,
         Map<String, TableQueryAssertion> tableAssertions,
         Set<String> tableNames,
-        Long maxExecutionTimeMs
+        Long maxExecutionTimeMs,
+        boolean noNPlusOne
     ) {
         this.expectedCounts = expectedCounts;
         this.tableAssertions = tableAssertions;
         this.tableNames = tableNames;
         this.maxExecutionTimeMs = maxExecutionTimeMs;
+        this.noNPlusOne = noNPlusOne;
     }
 
     /**
@@ -62,6 +65,7 @@ class QueryCountVerifier {
         verifyQueryCounts(errors);
         verifyTableQueryCounts(errors);
         collectExecutionTimeErrors(errors);
+        collectNPlusOneErrors(errors);
         return errors;
     }
 
@@ -170,6 +174,52 @@ class QueryCountVerifier {
                 errors.add(formatExecutionTimeError(violations, tableMaxTime, tableName));
             }
         }
+    }
+
+    private void collectNPlusOneErrors(List<String> errors) {
+        if (!noNPlusOne) {
+            return;
+        }
+
+        List<QueryInfo> target = (tableNames == null || tableNames.isEmpty())
+            ? cachedQueries
+            : cachedQueries.stream().filter(this::hasTableOverlap).toList();
+
+        List<NPlusOneDetector.Finding> findings = NPlusOneDetector.detect(target);
+        if (!findings.isEmpty()) {
+            errors.add(formatNPlusOneError(findings));
+        }
+    }
+
+    private String formatNPlusOneError(List<NPlusOneDetector.Finding> findings) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("N+1 assertion failed: %d query %s ran with different parameter values",
+            findings.size(), findings.size() == 1 ? "shape" : "shapes"));
+
+        int reportCount = Math.min(findings.size(), MAX_VIOLATIONS_TO_REPORT);
+        for (int i = 0; i < reportCount; i++) {
+            NPlusOneDetector.Finding finding = findings.get(i);
+            sb.append(String.format("\n[%d] %d executions, %d distinct parameter values\n    SQL: %s\n    params: %s",
+                i + 1,
+                finding.executionCount(),
+                finding.distinctParameters().size(),
+                finding.sql(),
+                describeParameters(finding.distinctParameters())));
+        }
+
+        if (findings.size() > MAX_VIOLATIONS_TO_REPORT) {
+            sb.append(String.format("\n... and %d more", findings.size() - MAX_VIOLATIONS_TO_REPORT));
+        }
+
+        return sb.toString();
+    }
+
+    private String describeParameters(List<List<List<Object>>> distinctParameters) {
+        return distinctParameters.stream()
+            .limit(MAX_VIOLATIONS_TO_REPORT)
+            .map(sets -> sets.size() == 1 ? sets.get(0).toString() : sets.toString())
+            .collect(Collectors.joining(", "))
+            + (distinctParameters.size() > MAX_VIOLATIONS_TO_REPORT ? ", ..." : "");
     }
 
     private String formatExecutionTimeError(List<QueryInfo> violations, long maxTime, String tableName) {

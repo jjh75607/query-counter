@@ -16,13 +16,15 @@ Catch N+1 problems and slow queries while writing tests, not after deploying.
 - **Compute expected counts at runtime.** Expected values are plain `long` values, so
   `select(members.size() + 1)` works. Annotations need their values fixed at compile time,
   so they cannot express expectations that depend on test data or parameterized cases.
+- **Catch N+1 without counting.** `noNPlusOne()` fails when the same SELECT ran with different
+  parameter values, so you do not have to know how many rows the test data has.
 
 #### What it does not do
 
 This is a narrow tool. [QuickPerf](https://github.com/quick-perf/quickperf) covers a much wider
-surface and does these, which query-counter does not: detecting N+1 directly, asserting on
-selected or updated columns, asserting JDBC batching, forbidding anti-patterns such as
-`LIKE '%...'` or statements without bind parameters, and JVM profiling.
+surface and does these, which query-counter does not: asserting on selected or updated columns,
+asserting JDBC batching, forbidding anti-patterns such as `LIKE '%...'` or statements without
+bind parameters, and JVM profiling.
 
 Reach for query-counter when you want table-scoped counts or runtime-computed expectations with a
 fluent assertion. Reach for QuickPerf when you want breadth.
@@ -154,6 +156,7 @@ count rather than ten. Expect round trips, not rows.
 | `delete(long expected)` | Expected number of DELETE statements |
 | `others(long expected)` | Expected number of any other statements |
 | `maxExecutionTimeMs(long ms)` | Fail if a single query takes longer than this |
+| `noNPlusOne()` | Fail if the same SELECT ran with different parameter values |
 | `verify()` | Run the assertions now. Optional, since unverified assertions are checked after the test |
 
 Expected values are `long`, so expressions work as well as constants. When the expected number of
@@ -173,6 +176,24 @@ QueryCounterAssertion.assertCounts()
 ```
 
 A plain number stays an exact match, so `select(3)` and `select(exactly(3))` are the same.
+
+**Catching N+1.** `noNPlusOne()` fails when one SELECT shape was executed more than once with
+different parameter values. That is the shape of an N+1: one query per parent row.
+
+```java
+QueryCounterAssertion.assertCounts()
+    .noNPlusOne()
+    .verify();
+```
+
+You do not have to know how much test data there is, which `select(1 + members.size())` requires.
+
+Repeating a SELECT with the **same** parameter values is not reported. That is a duplicate read,
+not an N+1. A statement sent as a JDBC batch is one round trip, so it is not reported either.
+
+There is no threshold: a single repetition with differing values fails. Use `select(atMost(n))`
+when you want to allow a number of queries instead. When `forTables` is set, only queries against
+those tables are considered.
 
 ##### Examples
 
@@ -277,6 +298,7 @@ void expectationPerParameterizedCase(int count) {
 
 - An `AssertionError` is thrown when the number of queries differs from what you expected.
 - An `AssertionError` is thrown when a query takes longer than `maxExecutionTimeMs`.
+- An `AssertionError` is thrown when `noNPlusOne()` finds a repeated SELECT with differing parameters.
 - Every mismatch is reported together, so you do not fix them one at a time.
 
 #### Message format
@@ -302,6 +324,17 @@ QueryType.SELECT: expected at most 2, but was 3
 java.lang.AssertionError: [Test: {package}.{class}#{method}]
 Query execution time assertion failed: max=100ms, violations=1
 [1] 120ms > 100ms, type=SELECT, SQL: SELECT * FROM member
+```
+
+An N+1 failure names the repeated statement and the values that differed, so you can see which
+association to fetch:
+
+```text
+java.lang.AssertionError: [Test: {package}.{class}#{method}]
+N+1 assertion failed: 1 query shape ran with different parameter values
+[1] 3 executions, 3 distinct parameter values
+    SQL: select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+    params: [1], [2], [3]
 ```
 
 When an assertion fails and no query was recorded at all, the message adds a reminder, because the

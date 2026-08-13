@@ -36,6 +36,7 @@ public class QueryCounterAssertion {
     private final Map<String, TableQueryAssertion> tableAssertions = new LinkedHashMap<>();
     private Set<String> tableNames;
     private Long maxExecutionTimeMs;
+    private boolean noNPlusOne;
 
     private QueryCounterAssertion() {
     }
@@ -121,6 +122,23 @@ public class QueryCounterAssertion {
         return this;
     }
 
+    /**
+     * Fails when the same SELECT was executed more than once with different parameter
+     * values. That is the shape of an N+1 problem: one query per parent row.
+     *
+     * <p>Repeating a SELECT with the <em>same</em> parameter values is not reported,
+     * because that is a duplicate read rather than an N+1.
+     *
+     * <p>There is no threshold. A single repetition with differing values fails.
+     * Use {@code select(atMost(n))} when you want to allow a number of queries instead.
+     *
+     * <p>Honours {@link #forTables(String...)} when it was set.
+     */
+    public QueryCounterAssertion noNPlusOne() {
+        this.noNPlusOne = true;
+        return this;
+    }
+
     public QueryCounterAssertion maxExecutionTimeMs(long maxExecutionTimeMs) {
         this.maxExecutionTimeMs = maxExecutionTimeMs;
         return this;
@@ -172,7 +190,8 @@ public class QueryCounterAssertion {
             expectedCounts,
             tableAssertions,
             tableNames,
-            maxExecutionTimeMs
+            maxExecutionTimeMs,
+            noNPlusOne
         );
         verifier.verify();
     }

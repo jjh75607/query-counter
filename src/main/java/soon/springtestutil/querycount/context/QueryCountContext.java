@@ -35,6 +35,16 @@ public final class QueryCountContext {
             .add(new QueryInfo(queryType, query, executionTimeMs));
     }
 
+    public static void addQuery(
+        QueryType queryType,
+        String query,
+        Long executionTimeMs,
+        List<List<Object>> parameters
+    ) {
+        queries.get()
+            .add(new QueryInfo(queryType, query, executionTimeMs, parameters));
+    }
+
     public static List<QueryInfo> getQueries() {
         return new ArrayList<>(queries.get());
     }
