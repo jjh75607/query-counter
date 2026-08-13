@@ -71,7 +71,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation("io.github.jjh75607:query-counter:0.2.1")
+    testImplementation("io.github.jjh75607:query-counter:0.3.0")
 }
 ```
 

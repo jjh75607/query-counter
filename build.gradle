@@ -6,7 +6,7 @@ plugins {
 
 // com.github.* 는 github.com 소유자가 아니면 Central 네임스페이스를 받을 수 없다.
 group = 'io.github.jjh75607'
-version = '0.2.1'
+version = '0.3.0'
 
 java {
     toolchain {
