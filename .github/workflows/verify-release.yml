@@ -1,8 +1,7 @@
 name: Verify Release
 
-# Central 은 올린 뒤 포털에서 Publish 를 눌러야 공개되고, 눌러도 반영까지 시간이 걸린다.
-# 릴리스 시점에는 아직 없는 것이 정상이라 자동으로 돌리면 늘 실패한다.
-# 그래서 공개를 누른 뒤에 손으로 돌린다.
+# Publish 를 손으로 누른 뒤에 돌린다. 릴리스 시점에는 아직 공개 전이라 자동 실행이
+# 늘 실패한다.
 on:
   workflow_dispatch:
     inputs:
@@ -62,3 +61,30 @@ jobs:
               "$BASE/query-counter-$VERSION$suffix" \
               || { echo "빠짐: query-counter-$VERSION$suffix"; exit 1; }
           done
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      # 위 검사는 파일이 있는지만 본다. 0.2.0 은 그 검사를 다 통과하고도 설치가
+      # 안 됐다. 이슈 #98 이다.
+      - name: Resolve it as a consumer would
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          mkdir -p consumer
+          echo "rootProject.name = 'consumer-check'" > consumer/settings.gradle
+          printf '%s\n' \
+            "plugins { id 'java' }" \
+            "repositories { mavenCentral() }" \
+            "dependencies { testImplementation 'io.github.jjh75607:query-counter:${VERSION}' }" \
+            "tasks.register('resolve') { doLast { configurations.testRuntimeClasspath.files.each { println it.name } } }" \
+            > consumer/build.gradle
+          gradle --no-daemon -q -p consumer resolve

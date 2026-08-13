@@ -7,6 +7,9 @@
 ---
 
 ## [Unreleased]
+### Fixed
+- **Gradle 로 설치하면 의존성 해석이 실패하던 문제를 고쳤습니다.** 발행된 아티팩트에 `spring-test`, `junit-jupiter-api`, `spring-boot-starter` 세 개의 버전이 비어 있어서 `Could not find org.springframework:spring-test:` 로 빌드가 멈췄습니다. 버전을 빌드 시점에만 채워주는 플러그인을 쓰고 있어서 발행물에는 아무 값도 남지 않았습니다. 이제 지원 하한인 Spring Boot 3.0.0 기준 버전을 직접 적습니다. 이미 Spring Boot 를 쓰는 프로젝트에서는 그쪽 버전이 그대로 유지되고, 아무 설정이 없는 프로젝트만 하한을 받습니다. `0.2.0` 이하는 모두 이 문제가 있으므로 `0.2.1` 이상을 쓰셔야 합니다
+
 ### Removed
 - **JitPack 배포를 접었습니다.** 이제 Maven Central 하나로만 배포합니다. 이미 나간 태그는 그대로 두므로 `v0.2.0` 이하를 JitPack 으로 받고 계셨다면 계속 받을 수 있지만, 앞으로 나올 버전은 JitPack 에서 빌드되지 않습니다. `io.github.jjh75607:query-counter` 로 옮기시면 됩니다. 배포 경로가 둘이면 서명 설정과 문서와 검증이 모두 두 벌이 되는데, 태그 7개 중 JitPack 이 빌드한 것이 둘뿐이라 그 값을 치를 이유가 없었습니다. JitPack 은 요청받을 때만 빌드하므로 나머지 다섯은 아무도 받아간 적이 없다는 뜻입니다
 
