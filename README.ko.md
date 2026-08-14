@@ -1,6 +1,7 @@
 # query-counter
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.jjh75607/query-counter)](https://central.sonatype.com/artifact/io.github.jjh75607/query-counter)
+[![CI](https://github.com/jjh75607/query-counter/actions/workflows/ci.yml/badge.svg)](https://github.com/jjh75607/query-counter/actions/workflows/ci.yml)
 
 [English](README.md)
 
@@ -11,9 +12,18 @@
 바꾸고, 지연 로딩 필드를 새 화면에서 건드립니다. **그 PR 에서 아무도 쿼리 수를 다시 세지
 않습니다.** 그리고 N+1 이 돌아옵니다.
 
-이 라이브러리는 그걸 실패하는 테스트로 만듭니다.
+이 라이브러리는 그걸 실패하는 테스트로 만듭니다. 테스트에 애노테이션을 붙이지 않고 셋업
+코드도 넣지 않습니다. `then` 블록의 체인 하나입니다.
 
-#### 무엇을 막습니까
+```java
+QueryCounterAssertion.assertCounts()
+    .forTables("member")
+    .select(1)
+    .noNPlusOne()
+    .verify();
+```
+
+## 무엇을 막습니까
 
 - **고친 N+1 이 돌아오는 것.** `noNPlusOne()` 은 같은 SELECT 가 서로 다른 파라미터 값으로
   반복되면 실패시킵니다. 테스트 데이터가 몇 건인지 몰라도 됩니다.
@@ -24,21 +34,21 @@
 - **이 라이브러리 때문에 남의 테스트가 깨지는 것.** 켜지 않으면 DataSource 를 건드리지
   않습니다. 문서로 약속한 게 아니라 테스트로 고정했습니다.
 
-# 목차
+## 다른 도구와 무엇이 다릅니까
 
-- [시작하기](#시작하기)
-    - [요구 사항](#요구-사항)
-    - [설치](#설치)
-    - [설정](#설정)
-    - [사용법](#사용법)
-- [API](#api)
-    - [메서드](#메서드)
-    - [예제](#예제)
-- [검증 실패](#검증-실패)
-    - [에러 메시지 형식](#에러-메시지-형식)
-- [설정 항목](#설정-항목)
+| 라이브러리 | 검증을 어떻게 쓰나 | 테스트가 준비할 것 |
+|---|---|---|
+| query-counter | `then` 블록의 체인. 값이 `long` 이라 계산해서 넘길 수 있습니다 | yml 한 줄. DataSource 는 알아서 감쌉니다 |
+| [QuickPerf](https://github.com/quick-perf/quickperf) | 테스트 메서드에 붙이는 애노테이션. 예를 들어 `@ExpectSelect(1)` | 프레임워크별 연동. 자체 가이드가 있습니다 |
+| [datasource-assert](https://github.com/ttddyy/datasource-assert) | `ProxyTestDataSource` 가 기록한 실행 목록에 대한 단정 | 테스트 안에서 프록시 DataSource 를 직접 구성 |
 
-# 시작하기
+실제로 갈리는 지점은 둘입니다. 기대 쿼리 수가 테스트 데이터 개수나 파라미터화 케이스를 따라
+달라지면 여기서는 상수가 아니라 식으로 씁니다. 애노테이션에는 식을 넣을 수 없습니다. 그리고
+`query-counter.enabled=true` 를 넣기 전에는 아무것도 기록하지 않으므로, 의존성을 추가했다는
+이유로 기존 테스트의 동작이 달라지지 않습니다.
+
+QuickPerf 는 SQL 을 넘어 JVM 힙 측정까지 다룹니다. 그만한 범위가 필요하면 그쪽을 쓰시면
+됩니다. 아래 N+1 판정 기준은 QuickPerf 가 N+1 을 정의하는 방식을 따랐습니다.
 
 ## 요구 사항
 
@@ -64,8 +74,8 @@ dependencies {
 }
 ```
 
-Maven Central 은 `0.2.1` 부터 쓰실 수 있습니다. `0.2.0` 은 의존성 버전이 비어 있어 Gradle 로
-해석되지 않습니다.
+Maven Central 은 `0.2.1` 부터 쓰실 수 있습니다. `0.2.0` 은 Central 에 올라가 있지만 발행된
+의존성 버전이 비어 있어 Gradle 로 해석되지 않고, 그 이전 버전은 Central 에 올라간 적이 없습니다.
 
 ## 설정
 
@@ -114,11 +124,7 @@ class MemberServiceTest {
 Spring 테스트 컨텍스트를 띄우지 않는 테스트라면 `@ExtendWith(QueryCountTestExtension.class)`를
 붙여야 테스트 간에 기록이 격리됩니다. Spring 테스트에는 필요하지 않습니다.
 
-### 돌아가는 예제
-
-아래 예제들은 [`src/test/java/soon/springtestutil/example`](src/test/java/soon/springtestutil/example)
-에 실제 테스트로도 들어 있어 `./gradlew build` 로 컴파일과 실행이 검증됩니다. 그 패키지는 JPA
-엔티티를 써서 N+1 이 생기는 모습과 `join fetch` 로 사라지는 모습을 보여줍니다.
+### 무엇이 세어집니까
 
 **셋업 쿼리도 카운트에 포함됩니다.** 기록은 테스트 메서드가 시작되기 직전에 초기화되므로
 `@BeforeEach` 나 `given` 블록에서 실행한 쿼리가 함께 셉니다. `when` 블록의 쿼리만 세고 싶으면
@@ -129,9 +135,9 @@ Spring 테스트 컨텍스트를 띄우지 않는 테스트라면 `@ExtendWith(Q
 를 켠 프로젝트에서는 엔티티 10건을 저장해도 INSERT 카운트가 10이 아니라 1이 될 수 있습니다.
 행 수가 아니라 왕복 횟수를 기대하시면 됩니다.
 
-### API
+## API
 
-##### 메서드
+### 메서드
 
 | 메서드 | 설명 |
 |---|---|
@@ -182,116 +188,107 @@ JDBC 배치로 나간 문장도 왕복이 한 번이라 대상이 아닙니다.
 임계값은 없습니다. 값이 다른 반복이 하나라도 있으면 실패입니다. 몇 번까지 허용하고 싶으면
 `select(atMost(n))` 을 쓰시면 됩니다. `forTables` 를 지정하면 그 테이블의 쿼리만 봅니다.
 
-이 판정 기준은 [QuickPerf](https://github.com/quick-perf/quickperf)가 N+1 을 정의하는 방식을
-따랐습니다.
+### 예제
 
-##### 예제
+아래 예제는 전부
+[`src/test/java/soon/springtestutil/example/QueryCounterExampleTest.java`](src/test/java/soon/springtestutil/example/QueryCounterExampleTest.java)
+에 있는 실제 테스트라 `./gradlew build` 로 컴파일과 실행이 검증됩니다. 여기서는 `@DisplayName`
+만 덜어냈습니다. 그 패키지는 JPA 엔티티를 써서 N+1 이 생기는 모습과 `join fetch` 로 사라지는
+모습을 보여줍니다.
+
+`saveMembersInSeparateTeams(n)` 은 회원 n 명을 각자 다른 팀에 저장한 뒤 영속성 컨텍스트를
+비웁니다. 회원마다 팀이 달라야 N+1 이 드러납니다. 팀을 공유하면 한 번만 읽고 그다음부터는
+영속성 컨텍스트에서 꺼내기 때문입니다.
 
 ```java
 @Test
-void getMember() {
-    // given
-    Member member = new Member("test");
-    memberRepository.save(member);
+void countByQueryType() {
+    // given - 팀 1건과 회원 1건을 저장하므로 INSERT 2회
+    saveMembersInSeparateTeams(1);
 
     // when
-    memberService.getMember(member.getId());
+    memberRepository.findAllLazily();
 
     // then
     QueryCounterAssertion.assertCounts()
-        .select(1)
-        .insert(1)
-        .verify();
-}
-
-@Test
-void updateOrderWithExecutionTimeCheck() {
-    // given
-    Product product = new Product("item", 1000);
-    productRepository.save(product);
-
-    Order order = new Order(1L, product, 100);
-    orderRepository.save(order);
-
-    // when
-    orderService.updateOrder(order.getId(), "item2", 200);
-
-    // then
-    QueryCounterAssertion.assertCounts()
-        .forTables("orders", "products")
         .insert(2)
         .select(1)
-        .update(1)
-        .maxExecutionTimeMs(100)
         .verify();
 }
 
 @Test
-void 테이블별로_다른_조건을_검증() {
+void noNPlusOnePassesWithJoinFetch() {
     // given
-    Member member = new Member("test");
-    memberRepository.save(member);
-
-    Product product = new Product("item", 1000);
-    productRepository.save(product);
+    saveMembersInSeparateTeams(3);
+    QueryCountContext.clear();
 
     // when
-    memberService.getMember(member.getId());
-    productService.getProducts();
+    memberRepository.findAllWithTeam().forEach(member -> member.getTeam().getName());
 
     // then
     QueryCounterAssertion.assertCounts()
-        .forTable("member").insert(1).select(1)
-        .forTable("product").insert(1).select(1)
+        .noNPlusOne()
         .verify();
 }
 
 @Test
-void 기대값을_런타임에_계산() {
-    // given - 데이터 개수가 바뀌면 기대 쿼리 수도 함께 바뀐다
-    List<Member> members = memberRepository.saveAll(
-        List.of(new Member("a"), new Member("b"), new Member("c"))
-    );
+void differentExpectationsPerTable() {
+    // given
+    saveMembersInSeparateTeams(2);
+    QueryCountContext.clear();
 
     // when
-    memberService.getMembersWithTeam();
+    memberRepository.findAllLazily().forEach(member -> member.getTeam().getName());
 
-    // then - 팀을 한 번에 가져오면 SELECT 1회, N+1이면 members.size() + 1회
+    // then - 회원은 한 번에 읽고, 팀은 회원마다 한 번씩 읽는다
     QueryCounterAssertion.assertCounts()
-        .forTables("member")
+        .forTable("member").select(1)
+        .forTable("team").select(2)
+        .verify();
+}
+
+@Test
+void assertExecutionTimeAlongWithCounts() {
+    // given
+    saveMembersInSeparateTeams(1);
+    QueryCountContext.clear();
+
+    // when
+    memberRepository.findAllWithTeam();
+
+    // then - 상한을 넘는 쿼리가 하나라도 있으면 AssertionError 가 발생한다.
+    // 여기서는 H2 인메모리라 모든 쿼리가 상한 안에 들어온다.
+    QueryCounterAssertion.assertCounts()
         .select(1)
-        .insert(members.size())
+        .maxExecutionTimeMs(1000)
         .verify();
 }
 
 @ParameterizedTest
-@ValueSource(ints = {1, 5, 10})
-void 케이스마다_기대값이_다른_경우(int count) {
+@ValueSource(ints = {1, 3, 5})
+void expectationPerParameterizedCase(int memberCount) {
     // given
-    for (int i = 0; i < count; i++) {
-        memberRepository.save(new Member("member" + i));
-    }
+    saveMembersInSeparateTeams(memberCount);
+    QueryCountContext.clear();
 
     // when
-    memberService.getMembers();
+    memberRepository.findAllLazily().forEach(member -> member.getTeam().getName());
 
-    // then
+    // then - 애노테이션으로는 표현할 수 없는 형태다
     QueryCounterAssertion.assertCounts()
-        .forTables("member")
-        .insert(count)
-        .select(1)
+        .select(1 + memberCount)
         .verify();
 }
 ```
 
-### 검증 실패
+## 검증 실패
 
 - 예상과 실제 쿼리 횟수가 다르면 `AssertionError`가 발생합니다.
 - `maxExecutionTimeMs`를 초과하는 쿼리가 있으면 `AssertionError`가 발생합니다.
 - `noNPlusOne()` 이 파라미터가 다른 SELECT 반복을 찾으면 `AssertionError`가 발생합니다.
 - 어긋난 항목을 모두 모아 한 번에 보고하므로 하나씩 고쳐가며 발견하지 않아도 됩니다.
 
-#### 에러 메시지 형식
+### 에러 메시지 형식
 
 ```text
 java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}] Query count assertion failed:
@@ -341,7 +338,7 @@ N+1 assertion failed: 1 query shape ran with different parameter values
 No query was recorded. Is query-counter.enabled=true set in your test configuration?
 ```
 
-# 설정 항목
+## 설정 항목
 
 | 프로퍼티 | 기본값 | 설명 |
 |---|---|---|
@@ -356,3 +353,7 @@ query-counter:
 ```
 
 두 프로퍼티 모두 IDE 자동완성에 설명과 함께 표시됩니다.
+
+## 변경 이력
+
+릴리스마다 무엇이 바뀌었는지는 [CHANGELOG.md](CHANGELOG.md) 에 있습니다.
