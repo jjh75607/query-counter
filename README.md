@@ -305,12 +305,20 @@ void expectationPerParameterizedCase(int count) {
 
 ```text
 java.lang.AssertionError: [Test: {package}.{class}#{method}] Query count assertion failed:
-QueryType.SELECT: expected 3, but was 2
+QueryType.SELECT: expected 1, but was 4
+  [1] select m1_0.id,m1_0.name,m1_0.team_id from member m1_0
+  [2] select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+  [3] select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+  ... and 1 more
 ```
+
+The statements that were counted are listed, so you do not have to turn on SQL logging and run the
+test again to find out which ones they were. At most three are shown.
 
 ```text
 java.lang.AssertionError: [Test: {package}.{class}#{method}] Table-specific query count assertion failed:
 Table 'member' - QueryType.SELECT: expected 2, but was 1
+  [1] select m1_0.id,m1_0.name from member m1_0
 ```
 
 An upper bound reads the same way, with the comparison spelled out:
