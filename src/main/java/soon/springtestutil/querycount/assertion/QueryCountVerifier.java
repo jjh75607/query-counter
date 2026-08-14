@@ -88,9 +88,41 @@ class QueryCountVerifier {
     private String compareCount(QueryType type, ExpectedCount expected, Map<QueryType, Long> actual) {
         long actualCount = actual.getOrDefault(type, 0L);
         if (!expected.matches(actualCount)) {
-            return String.format("QueryType.%s: %s, but was %d", type, expected.describe(), actualCount);
+            return String.format("QueryType.%s: %s, but was %d", type, expected.describe(), actualCount)
+                + describeQueries(queriesOfType(type, null));
         }
         return null;
+    }
+
+    private List<QueryInfo> queriesOfType(QueryType type, String tableName) {
+        return cachedQueries.stream()
+            .filter(q -> q.getQueryType() == type)
+            .filter(q -> tableName != null ? q.getTableNames().contains(tableName) : matchesTableFilter(q))
+            .toList();
+    }
+
+    private boolean matchesTableFilter(QueryInfo queryInfo) {
+        return tableNames == null || tableNames.isEmpty() || hasTableOverlap(queryInfo);
+    }
+
+    /**
+     * 실제로 나간 SQL 을 실패 메시지에 붙입니다. 숫자만 알려주면 어느 쿼리가 늘었는지 찾으려고
+     * SQL 로깅을 켜고 테스트를 다시 돌려야 합니다.
+     */
+    private String describeQueries(List<QueryInfo> queries) {
+        if (queries.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        int reportCount = Math.min(queries.size(), MAX_VIOLATIONS_TO_REPORT);
+        for (int i = 0; i < reportCount; i++) {
+            sb.append(String.format("%n  [%d] %s", i + 1, queries.get(i).getQuery()));
+        }
+        if (queries.size() > MAX_VIOLATIONS_TO_REPORT) {
+            sb.append(String.format("%n  ... and %d more", queries.size() - MAX_VIOLATIONS_TO_REPORT));
+        }
+        return sb.toString();
     }
 
     private void verifyTableQueryCounts(List<String> errors) {
@@ -125,7 +157,8 @@ class QueryCountVerifier {
             long actual = actualCounts.getOrDefault(entry.getKey(), 0L);
             if (!entry.getValue().matches(actual)) {
                 errors.add(String.format("Table '%s' - QueryType.%s: %s, but was %d",
-                    tableName, entry.getKey(), entry.getValue().describe(), actual));
+                    tableName, entry.getKey(), entry.getValue().describe(), actual)
+                    + describeQueries(queriesOfType(entry.getKey(), tableName)));
             }
         }
         return errors;

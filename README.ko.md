@@ -73,8 +73,8 @@ dependencies {
 }
 ```
 
-Maven Central 은 `0.2.1` 부터 쓰실 수 있습니다. `0.2.0` 은 의존성 버전이 비어 있어 Gradle 로 해석되지 않습니다.
-없습니다.
+Maven Central 은 `0.2.1` 부터 쓰실 수 있습니다. `0.2.0` 은 의존성 버전이 비어 있어 Gradle 로
+해석되지 않습니다.
 
 ## 설정
 
@@ -301,12 +301,20 @@ void 케이스마다_기대값이_다른_경우(int count) {
 
 ```text
 java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}] Query count assertion failed:
-QueryType.SELECT: expected 3, but was 2
+QueryType.SELECT: expected 1, but was 4
+  [1] select m1_0.id,m1_0.name,m1_0.team_id from member m1_0
+  [2] select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+  [3] select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+  ... and 1 more
 ```
+
+센 쿼리가 함께 나오므로 어떤 쿼리였는지 보려고 SQL 로깅을 켜고 테스트를 다시 돌릴 필요가
+없습니다. 최대 세 개까지 보여줍니다.
 
 ```text
 java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}] Table-specific query count assertion failed:
 Table 'member' - QueryType.SELECT: expected 2, but was 1
+  [1] select m1_0.id,m1_0.name from member m1_0
 ```
 
 상한 검증도 같은 형식이고 비교 방식이 문구에 드러납니다.
