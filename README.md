@@ -1,6 +1,7 @@
 # query-counter
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.jjh75607/query-counter)](https://central.sonatype.com/artifact/io.github.jjh75607/query-counter)
+[![CI](https://github.com/jjh75607/query-counter/actions/workflows/ci.yml/badge.svg)](https://github.com/jjh75607/query-counter/actions/workflows/ci.yml)
 
 [한국어](README.ko.md)
 
@@ -11,9 +12,18 @@ You fixed the N+1 with a `join fetch`. Six months later someone adds a field to 
 repository method, or touches a lazy field from a new screen. **Nobody re-counts the queries in
 that pull request.** The N+1 is back.
 
-This library turns that into a failing test.
+This library turns that into a failing test. It is a chain in the `then` block, with no annotation
+on the test and no setup code inside it.
 
-#### What it prevents
+```java
+QueryCounterAssertion.assertCounts()
+    .forTables("member")
+    .select(1)
+    .noNPlusOne()
+    .verify();
+```
+
+## What it prevents
 
 - **A fixed N+1 coming back.** `noNPlusOne()` fails when the same SELECT runs with different
   parameter values. You do not need to know how much test data there is.
@@ -23,21 +33,21 @@ This library turns that into a failing test.
 - **This library breaking other people's tests.** It leaves the DataSource untouched until you
   enable it. That is locked in by a test, not just documented.
 
-# Table of contents
+## How it differs from other tools
 
-- [Getting started](#getting-started)
-    - [Requirements](#requirements)
-    - [Install](#install)
-    - [Configure](#configure)
-    - [Usage](#usage)
-- [API](#api)
-    - [Methods](#methods)
-    - [Examples](#examples)
-- [Failures](#failures)
-    - [Message format](#message-format)
-- [Settings](#settings)
+| Library | How an assertion is written | What the test sets up |
+|---|---|---|
+| query-counter | A chain in the `then` block, taking `long` values that can be computed | One line of yml. The DataSource is wrapped for you |
+| [QuickPerf](https://github.com/quick-perf/quickperf) | An annotation on the test method, such as `@ExpectSelect(1)` | Framework specific wiring, covered by its own guides |
+| [datasource-assert](https://github.com/ttddyy/datasource-assert) | Assertions over the recorded executions of a `ProxyTestDataSource` | The proxy DataSource, constructed in the test |
 
-# Getting started
+Two differences show up in daily use. An expected count that follows the amount of test data or a
+parameterized case is an expression here rather than a constant, and an annotation cannot hold an
+expression. And nothing is recorded until `query-counter.enabled=true` is set, so adding the
+dependency cannot change how existing tests behave.
+
+QuickPerf reaches well beyond SQL, into JVM heap measurement among other things, so pick it up when
+you want that range. The N+1 rule below follows how QuickPerf defines an N+1.
 
 ## Requirements
 
@@ -63,7 +73,8 @@ dependencies {
 }
 ```
 
-Maven Central starts at `0.2.1`. Earlier releases either predate Central or cannot be resolved by Gradle.
+Maven Central starts at `0.2.1`. `0.2.0` is on Central but its published dependency versions are
+empty, so Gradle cannot resolve it, and anything earlier was never published there.
 
 ## Configure
 
@@ -113,12 +124,7 @@ If your test does not load a Spring test context, add
 `@ExtendWith(QueryCountTestExtension.class)` so that recorded queries are still isolated between
 tests. Spring tests do not need it.
 
-### Runnable examples
-
-Every example below is also a real test in
-[`src/test/java/soon/springtestutil/example`](src/test/java/soon/springtestutil/example),
-so it compiles and runs with `./gradlew build`. That package uses JPA entities and shows an
-N+1 problem appearing and then disappearing after a `join fetch`.
+### What gets counted
 
 **Setup queries are counted too.** The recording is reset just before the test method starts, so
 queries issued in `@BeforeEach` or in the `given` block are included. Call
@@ -129,9 +135,9 @@ once no matter how many were stacked, because that is one round trip to the data
 project enables `hibernate.jdbc.batch_size`, saving ten entities can produce a single INSERT
 count rather than ten. Expect round trips, not rows.
 
-### API
+## API
 
-##### Methods
+### Methods
 
 | Method | Description |
 |---|---|
@@ -183,115 +189,107 @@ There is no threshold: a single repetition with differing values fails. Use `sel
 when you want to allow a number of queries instead. When `forTables` is set, only queries against
 those tables are considered.
 
-This rule follows how [QuickPerf](https://github.com/quick-perf/quickperf) defines an N+1.
+### Examples
 
-##### Examples
+Each example below is a real test in
+[`src/test/java/soon/springtestutil/example/QueryCounterExampleTest.java`](src/test/java/soon/springtestutil/example/QueryCounterExampleTest.java),
+so it compiles and runs with `./gradlew build`. Only the display names and the comment language
+are adapted here. That package uses JPA entities and shows an N+1 appearing and then disappearing
+after a `join fetch`.
+
+`saveMembersInSeparateTeams(n)` saves n members, each in a team of its own, then flushes and clears
+the persistence context. Every member needs a different team for an N+1 to be visible at all, since
+a shared team would be read once and then served from the persistence context.
 
 ```java
 @Test
-void getMember() {
-    // given
-    Member member = new Member("test");
-    memberRepository.save(member);
+void countByQueryType() {
+    // given - one team and one member are saved, so two INSERTs
+    saveMembersInSeparateTeams(1);
 
     // when
-    memberService.getMember(member.getId());
+    memberRepository.findAllLazily();
 
     // then
     QueryCounterAssertion.assertCounts()
+        .insert(2)
         .select(1)
-        .insert(1)
         .verify();
 }
 
 @Test
-void updateOrderWithExecutionTimeCheck() {
+void noNPlusOnePassesWithJoinFetch() {
     // given
-    Product product = new Product("item", 1000);
-    productRepository.save(product);
-
-    Order order = new Order(1L, product, 100);
-    orderRepository.save(order);
+    saveMembersInSeparateTeams(3);
+    QueryCountContext.clear();
 
     // when
-    orderService.updateOrder(order.getId(), "item2", 200);
+    memberRepository.findAllWithTeam().forEach(member -> member.getTeam().getName());
 
     // then
     QueryCounterAssertion.assertCounts()
-        .forTables("orders", "products")
-        .insert(2)
-        .select(1)
-        .update(1)
-        .maxExecutionTimeMs(100)
+        .noNPlusOne()
         .verify();
 }
 
 @Test
 void differentExpectationsPerTable() {
     // given
-    Member member = new Member("test");
-    memberRepository.save(member);
-
-    Product product = new Product("item", 1000);
-    productRepository.save(product);
+    saveMembersInSeparateTeams(2);
+    QueryCountContext.clear();
 
     // when
-    memberService.getMember(member.getId());
-    productService.getProducts();
+    memberRepository.findAllLazily().forEach(member -> member.getTeam().getName());
 
-    // then
+    // then - members are read at once, and a team is read once per member
     QueryCounterAssertion.assertCounts()
-        .forTable("member").insert(1).select(1)
-        .forTable("product").insert(1).select(1)
+        .forTable("member").select(1)
+        .forTable("team").select(2)
         .verify();
 }
 
 @Test
-void expectedCountComputedAtRuntime() {
-    // given - the expected number of queries follows the amount of data
-    List<Member> members = memberRepository.saveAll(
-        List.of(new Member("a"), new Member("b"), new Member("c"))
-    );
+void assertExecutionTimeAlongWithCounts() {
+    // given
+    saveMembersInSeparateTeams(1);
+    QueryCountContext.clear();
 
     // when
-    memberService.getMembersWithTeam();
+    memberRepository.findAllWithTeam();
 
-    // then - one SELECT when teams are fetched together, members.size() + 1 when N+1 happens
+    // then - a single statement over the limit raises an AssertionError.
+    // On in-memory H2 every query stays well under it.
     QueryCounterAssertion.assertCounts()
-        .forTables("member")
         .select(1)
-        .insert(members.size())
+        .maxExecutionTimeMs(1000)
         .verify();
 }
 
 @ParameterizedTest
-@ValueSource(ints = {1, 5, 10})
-void expectationPerParameterizedCase(int count) {
+@ValueSource(ints = {1, 3, 5})
+void expectationPerParameterizedCase(int memberCount) {
     // given
-    for (int i = 0; i < count; i++) {
-        memberRepository.save(new Member("member" + i));
-    }
+    saveMembersInSeparateTeams(memberCount);
+    QueryCountContext.clear();
 
     // when
-    memberService.getMembers();
+    memberRepository.findAllLazily().forEach(member -> member.getTeam().getName());
 
-    // then
+    // then - an annotation cannot express this
     QueryCounterAssertion.assertCounts()
-        .forTables("member")
-        .insert(count)
-        .select(1)
+        .select(1 + memberCount)
         .verify();
 }
 ```
 
-### Failures
+## Failures
 
 - An `AssertionError` is thrown when the number of queries differs from what you expected.
 - An `AssertionError` is thrown when a query takes longer than `maxExecutionTimeMs`.
 - An `AssertionError` is thrown when `noNPlusOne()` finds a repeated SELECT with differing parameters.
 - Every mismatch is reported together, so you do not fix them one at a time.
 
-#### Message format
+### Message format
 
 ```text
 java.lang.AssertionError: [Test: {package}.{class}#{method}] Query count assertion failed:
@@ -342,7 +340,7 @@ usual cause is a missing setting:
 No query was recorded. Is query-counter.enabled=true set in your test configuration?
 ```
 
-# Settings
+## Settings
 
 | Property | Default | Description |
 |---|---|---|
@@ -357,3 +355,7 @@ query-counter:
 ```
 
 Both properties appear with descriptions in IDE autocompletion.
+
+## Changelog
+
+What changed in each release is in [CHANGELOG.md](CHANGELOG.md).
