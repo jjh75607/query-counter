@@ -5,35 +5,23 @@
 [한국어](README.ko.md)
 
 ***
-> A test library for asserting how many queries a Spring test executes, and how long they take.
+> **Keeps a fixed N+1 from coming back.**
 
-Catch N+1 problems and slow queries while writing tests, not after deploying.
+You fixed the N+1 with a `join fetch`. Six months later someone adds a field to the DTO, changes a
+repository method, or touches a lazy field from a new screen. **Nobody re-counts the queries in
+that pull request.** The N+1 is back.
 
-#### What it does that annotation-based tools cannot
+This library turns that into a failing test.
 
-- **Assert per table.** Verify only the queries that touch the tables you care about, even when
-  the test touches several.
-- **Compute expected counts at runtime.** Expected values are plain `long` values, so
-  `select(members.size() + 1)` works. Annotations need their values fixed at compile time,
-  so they cannot express expectations that depend on test data or parameterized cases.
-- **Catch N+1 without counting.** `noNPlusOne()` fails when the same SELECT ran with different
-  parameter values, so you do not have to know how many rows the test data has.
+#### What it prevents
 
-#### What it does not do
-
-This is a narrow tool. [QuickPerf](https://github.com/quick-perf/quickperf) covers a much wider
-surface and does these, which query-counter does not: asserting on selected or updated columns,
-asserting JDBC batching, forbidding anti-patterns such as `LIKE '%...'` or statements without
-bind parameters, and JVM profiling.
-
-Reach for query-counter when you want table-scoped counts or runtime-computed expectations with a
-fluent assertion. Reach for QuickPerf when you want breadth.
-
-#### Never in the way
-
-**When you do not enable it, this library does nothing.** The DataSource is left untouched, so
-adding the dependency cannot change the behaviour of tests that do not use it. That property is
-locked in by a test, not just documented.
+- **A fixed N+1 coming back.** `noNPlusOne()` fails when the same SELECT runs with different
+  parameter values. You do not need to know how much test data there is.
+- **A query count creeping up unnoticed.** `select(3)` fails the build the moment it becomes 5,
+  and lists the statements that ran.
+- **A slow query slipping in.** `maxExecutionTimeMs(100)` fails when a single statement crosses it.
+- **This library breaking other people's tests.** It leaves the DataSource untouched until you
+  enable it. That is locked in by a test, not just documented.
 
 # Table of contents
 
@@ -194,6 +182,8 @@ not an N+1. A statement sent as a JDBC batch is one round trip, so it is not rep
 There is no threshold: a single repetition with differing values fails. Use `select(atMost(n))`
 when you want to allow a number of queries instead. When `forTables` is set, only queries against
 those tables are considered.
+
+This rule follows how [QuickPerf](https://github.com/quick-perf/quickperf) defines an N+1.
 
 ##### Examples
 
