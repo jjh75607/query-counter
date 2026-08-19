@@ -22,6 +22,7 @@ Maven Central 로 배포한다.
 ```
 config/
   AutoConfig                        조건부 자동 설정. @Bean 으로 명시
+  NPlusOneSettingCheck              검사만 켜고 카운팅을 안 켠 구성을 경고. 검사를 켠 때만 로딩
   QueryCounterProperties            yml 프로퍼티. IDE 자동완성 메타데이터의 출처
   DataSourceProxyBeanPostProcessor  DataSource 를 프록시로 감쌈
 querycount/
@@ -60,6 +61,19 @@ querycount/
 `QueryCountVerifier`가 안내를 덧붙이는 자리다. 판단에 필요한 정보가 이미 ThreadLocal에
 있으므로 별도 상태를 두지 않는다. 예전에 static 플래그를 썼다가 리셋되지 않아 테스트
 불가능해져서 걷어냈다.
+
+### 조용히 안 도는 구성은 경고로 알린다
+
+`query-counter.n-plus-one.enabled=true` 만 켜면 아무 일도 일어나지 않는다. `AutoConfig`가
+`query-counter.enabled=true`에만 걸려 있어 DataSource를 감싸지 않고, 감싸지 않으면 기록도
+모드 전달도 없다. **실패하지 않고 틀리는 종류라** 사용자는 검사가 도는 줄 안다.
+
+`NPlusOneSettingCheck`가 이 구성을 경고한다. 검사를 켠 구성에서만 로딩되므로 켜지 않은
+프로젝트에는 클래스가 만들어지지도 않고, 실패시키지 않고 경고만 남긴다. 설정 실수로 남의
+빌드를 세우지 않는다.
+
+**설정을 더할 때 같은 것을 확인한다.** 켰는데 아무 일도 안 일어나는 조합이 생기면 그 조합을
+알려 줄 자리를 함께 만든다.
 
 ### 설정은 기록 경로를 타고 테스트 경계로 간다
 
