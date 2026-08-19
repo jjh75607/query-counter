@@ -364,6 +364,8 @@ No query was recorded. Is query-counter.enabled=true set in your test configurat
 | `query-counter.n-plus-one.enabled` | `false` | Check every test for an N+1, with nothing written in the test |
 | `query-counter.n-plus-one.fail` | `false` | Fail the test when that check finds one. When false it is logged as a warning |
 | `query-counter.other-threads.enabled` | `false` | Count queries a test caused on another thread, such as a request handled by the server in an acceptance test |
+| `query-counter.max-queries.per-test` | `0` | Fail a test that runs more queries than this. 0 means no limit |
+| `query-counter.max-queries.report` | `false` | Log the query count of every test, to help pick the limit |
 
 ```yaml
 query-counter:
@@ -375,9 +377,51 @@ query-counter:
     fail: false
   other-threads:
     enabled: false
+  max-queries:
+    per-test: 0
+    report: false
 ```
 
 Every property appears with a description in IDE autocompletion.
+
+### A ceiling on queries per test
+
+An assertion written by hand says an exact number for one test. A ceiling says a rough number for
+every test, with nothing written in any of them.
+
+```yaml
+query-counter:
+  enabled: true
+  max-queries:
+    per-test: 50
+```
+
+**It catches a different thing than an exact assertion does.** A loop around a repository call turns
+3 queries into 200, and the ceiling catches that in whichever test runs it. A count creeping from 3
+to 12 stays under any useful ceiling, and that is fine: the ceiling is a net for runaway queries, not
+a regression check.
+
+Pick the number from what the suite runs today rather than from a round figure.
+
+```yaml
+query-counter:
+  enabled: true
+  max-queries:
+    report: true
+logging:
+  level:
+    soon.springtestutil: info
+```
+
+That logs one line per test, so the highest number in the suite is easy to find, and then a ceiling
+above it will not fail anything that passes today. **The logging line matters**: a test setup with
+`logging.level.root: warn` swallows the report. If that happens, a warning says so rather than
+leaving the impression that nothing was counted.
+
+Two things count toward the ceiling that are easy to forget. Queries a test setup runs, including a
+listener that truncates tables between tests, are counted like any other. And with
+`other-threads.enabled` on, queries the server ran for a request are counted too. Both are part of
+what the test actually caused, so the number to pick is the one the report shows.
 
 ### Counting queries that ran on another thread
 

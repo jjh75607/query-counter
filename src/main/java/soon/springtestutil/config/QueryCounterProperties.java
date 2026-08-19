@@ -18,6 +18,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     fail: false
  *   other-threads:
  *     enabled: false
+ *   max-queries:
+ *     per-test: 0
+ *     report: false
  * }</pre>
  */
 @ConfigurationProperties(prefix = "query-counter")
@@ -33,6 +36,8 @@ public class QueryCounterProperties {
     private final NPlusOne nPlusOne = new NPlusOne();
 
     private final OtherThreads otherThreads = new OtherThreads();
+
+    private final MaxQueries maxQueries = new MaxQueries();
 
     public boolean isEnabled() {
         return this.enabled;
@@ -52,6 +57,50 @@ public class QueryCounterProperties {
 
     public OtherThreads getOtherThreads() {
         return this.otherThreads;
+    }
+
+    public MaxQueries getMaxQueries() {
+        return this.maxQueries;
+    }
+
+    /**
+     * A ceiling on how many queries one test may run.
+     *
+     * <p>Off by default. A ceiling catches a test that suddenly runs hundreds of queries, which
+     * is what a loop around a repository call looks like. It does not catch a count creeping
+     * from 3 to 12, and it is not meant to.
+     *
+     * <p>Pick the number from what the suite runs today. {@code report} logs the count of every
+     * test so that number is easy to find.
+     */
+    public static class MaxQueries {
+
+        /**
+         * How many queries one test may run. 0 means no limit.
+         */
+        private int perTest = 0;
+
+        /**
+         * Whether to log the query count of every test, to help pick the limit.
+         */
+        private boolean report = false;
+
+        public int getPerTest() {
+            return this.perTest;
+        }
+
+        public void setPerTest(int perTest) {
+            this.perTest = perTest;
+        }
+
+        public boolean isReport() {
+            return this.report;
+        }
+
+        public void setReport(boolean report) {
+            this.report = report;
+        }
+
     }
 
     /**

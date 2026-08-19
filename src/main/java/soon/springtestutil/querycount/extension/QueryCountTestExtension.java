@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import soon.springtestutil.core.context.TestContextHolder;
 import soon.springtestutil.querycount.assertion.NPlusOneWatch;
 import soon.springtestutil.querycount.assertion.QueryCounterAssertion;
+import soon.springtestutil.querycount.assertion.QueryLimitWatch;
 import soon.springtestutil.querycount.context.QueryCountContext;
 
 /**
@@ -45,6 +46,7 @@ public class QueryCountTestExtension implements BeforeEachCallback, AfterEachCal
                 QueryCountContext.mergeOtherThreadQueries();
                 QueryCounterAssertion.verifyPending();
                 NPlusOneWatch.run();
+                QueryLimitWatch.run();
             }
         }
         finally {

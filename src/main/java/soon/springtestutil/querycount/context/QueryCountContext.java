@@ -1,6 +1,7 @@
 package soon.springtestutil.querycount.context;
 
 import soon.springtestutil.querycount.NPlusOneCheck;
+import soon.springtestutil.querycount.QueryLimit;
 import soon.springtestutil.querycount.QueryType;
 
 import java.util.ArrayList;
@@ -21,6 +22,9 @@ public final class QueryCountContext {
 
     private static final ThreadLocal<NPlusOneCheck> nPlusOneCheck =
         ThreadLocal.withInitial(() -> NPlusOneCheck.OFF);
+
+    private static final ThreadLocal<QueryLimit> queryLimit =
+        ThreadLocal.withInitial(() -> QueryLimit.OFF);
 
     private static final ThreadLocal<List<QueryInfo>> queries = ThreadLocal
         .withInitial(ArrayList::new);
@@ -80,6 +84,24 @@ public final class QueryCountContext {
         return nPlusOneCheck.get();
     }
 
+    /**
+     * Records the per-test query limit for the current test.
+     *
+     * <p>Internal wiring, carried the same way as the N+1 mode and for the same reason: the
+     * setting lives in the application context and the listener that ends each test must not
+     * touch that context.
+     */
+    public static void requestQueryLimit(QueryLimit limit) {
+        queryLimit.set(limit);
+    }
+
+    /**
+     * Returns the query limit for the current test, {@link QueryLimit#OFF} by default.
+     */
+    public static QueryLimit getQueryLimit() {
+        return queryLimit.get();
+    }
+
     public static List<QueryInfo> getQueries() {
         return new ArrayList<>(queries.get());
     }
@@ -97,6 +119,7 @@ public final class QueryCountContext {
         queries.remove();
         nPlusOneCheck.remove();
         OtherThreadQueries.clear();
+        queryLimit.remove();
     }
 
 }
