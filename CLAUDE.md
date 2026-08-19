@@ -277,7 +277,7 @@ checkstyle 은 없다.
 
 ## 릴리스
 
-설치 좌표는 `io.github.jjh75607:query-counter:0.4.0` 이다. `0.1.0` 이하는 Central 에 없다.
+설치 좌표는 `io.github.jjh75607:query-counter:0.5.0` 이다. `0.1.0` 이하는 Central 에 없다.
 JitPack 으로 내던 시절의 것이고 2026-08-13 에 그 경로를 접었다. 근거는 태그 7개 중 JitPack 이
 빌드한 것이 둘뿐이었다는 것이다. JitPack 은 요청받을 때만 빌드하므로 나머지는 아무도 받아간
 적이 없다는 뜻이다. 쓰는 사람이 없는데 배포 경로가 둘이면 서명 설정과 문서와 검증이 모두
@@ -294,7 +294,7 @@ JitPack 으로 내던 시절의 것이고 2026-08-13 에 그 경로를 접었다
 4. `https://central.sonatype.com/publishing/deployments` 에서 확인하고 Publish 를 누른다.
    이걸 누르기 전에는 아무도 받을 수 없다
 5. `verify-release.yml` 을 태그를 넣어 수동 실행한다. 공개를 누른 뒤에 도는 것이라 자동
-   실행은 걸어두지 않았다. 명령으로는 `gh workflow run verify-release.yml -f tag=v0.4.0` 이다
+   실행은 걸어두지 않았다. 명령으로는 `gh workflow run verify-release.yml -f tag=v0.5.0` 이다
 
 **Publish 를 누른 뒤 `repo1.maven.org` 에 퍼지기까지 몇 분에서 수십 분 걸린다.** 4번과 5번
 사이의 이 시차를 모르면 5번의 404 를 릴리스 실패로 읽는다. `0.4.0` 에서 실제로 그랬다.
@@ -338,7 +338,7 @@ Central 은 서명 없는 아티팩트를 받지 않는다. 서명 키는 저장
 `-Pversion=0.3.0-SNAPSHOT` 으로 서명을 건너뛰려는 시도는 통하지 않는다. `build.gradle` 이
 `version` 을 직접 대입하고 있어서 명령줄 프로퍼티가 덮이지 않는다.
 
-그래서 그 자리를 `-PpublishVersion` 으로 열어 두었다. `version = findProperty('publishVersion') ?: '0.4.0'`
+그래서 그 자리를 `-PpublishVersion` 으로 열어 두었다. `version = findProperty('publishVersion') ?: '0.5.0'`
 이고, SNAPSHOT 을 넘기면 `signMavenPublication` 이 SKIPPED 되어 키 없이
 `publishToMavenLocal` 이 된다. **소비자 스모크 테스트 전용이다.**
 
