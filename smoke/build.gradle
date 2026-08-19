@@ -1,0 +1,45 @@
+// 발행물을 소비자로서 받아 실제로 호출하는 스모크 테스트다.
+//
+// 루트 빌드(settings.gradle)에 포함하지 않는다. 포함하면 프로젝트 소스를 그대로 쓰게 되어
+// 발행물을 검증하지 못한다. Maven 저장소에서 받은 jar 를 쓰는 것이 이 프로젝트의 존재
+// 이유다.
+plugins {
+    id 'java'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+// mavenLocal 이 먼저다. CI 가 publishToMavenLocal 로 낸 SNAPSHOT 을 여기서 받는다.
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+def libraryVersion = findProperty('libraryVersion') ?: '0.3.0'
+def springBootVersion = findProperty('springBootVersion') ?: '3.5.0'
+
+dependencies {
+    // enforcedPlatform 이 아니라 platform 이다. 라이브러리가 발행한 하한이 소비자의
+    // 버전에 눌리는지가 검증 대상이다.
+    testImplementation platform("org.springframework.boot:spring-boot-dependencies:${springBootVersion}")
+
+    testImplementation "io.github.jjh75607:query-counter:${libraryVersion}"
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'com.h2database:h2'
+
+    // 빠지면 테스트를 하나도 못 찾고 엔진 버전이 어긋났다는 엉뚱한 메시지가 나온다.
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'failed'
+    }
+}

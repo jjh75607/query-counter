@@ -58,3 +58,56 @@ jobs:
           name: test-report-${{ matrix.spring-boot || 'default' }}
           path: build/reports/tests/test/
           retention-days: 7
+
+  smoke:
+    # 발행물을 소비자로서 받아 실제로 호출한다. build 잡은 프로젝트 소스를 그대로 쓰므로
+    # jar 에 무엇이 실려 나갔는지, 의존성이 해석되는지를 보지 못한다. `0.2.0` 이 의존성
+    # 버전이 빈 채로 나가 설치가 안 됐던 것이 그 틈이다(이슈 #98). 릴리스 뒤에 도는
+    # Verify Release 만으로는 늦다.
+    #
+    # 하한과 최신만 돌린다. 그 사이 버전에서 갈리는 것은 해석이 아니라 동작이고 그쪽은
+    # build 잡이 넷을 본다.
+    name: Consumer smoke test (Spring Boot ${{ matrix.spring-boot }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        spring-boot: ['3.0.0', '4.1.0']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x ./gradlew
+
+      # 서명 키가 없으면 publishToMavenLocal 이 실패한다. SNAPSHOT 이면 발행 플러그인이
+      # 서명을 건너뛰므로 키 없이 낼 수 있다.
+      - name: Publish to the local Maven repository
+        run: ./gradlew publishToMavenLocal -PpublishVersion=0.0.0-SMOKE-SNAPSHOT
+
+      # smoke 는 루트 빌드에 포함되지 않은 별도 프로젝트다. mavenLocal 에서 위 발행물을
+      # 받아 Spring 테스트 안에서 실제로 호출한다.
+      - name: Resolve and call it as a consumer
+        run: |
+          ./gradlew -p smoke test \
+            -PlibraryVersion=0.0.0-SMOKE-SNAPSHOT \
+            -PspringBootVersion=${{ matrix.spring-boot }}
+
+      - name: Upload smoke test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report-${{ matrix.spring-boot }}
+          path: smoke/build/reports/tests/test/
+          retention-days: 7
