@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class QueryCountListener implements QueryExecutionListener {
@@ -51,6 +52,17 @@ public class QueryCountListener implements QueryExecutionListener {
     }
 
     /**
+     * 아무도 비우지 않는 기록을 여기까지만 담습니다.
+     *
+     * <p>테스트 스레드가 아닌 곳의 기록은 `other-threads` 를 켜지 않으면 읽을 수도 없고
+     * 비워지지도 않습니다. 그런 기록이 무한히 쌓이지 않게 상한을 둡니다. 실제로 쓰이는 경로에
+     * 닿지 않을 만큼 넉넉하게 잡습니다.
+     */
+    static final int UNCOLLECTED_CAP = 10_000;
+
+    private static final AtomicBoolean warnedAboutUncollected = new AtomicBoolean();
+
+    /**
      * 기록을 어디에 담을지 고릅니다.
      *
      * <p>켜져 있고 테스트 스레드가 아니면 공용 수집소에 담습니다. 그 밖에는 지금까지처럼 이
@@ -70,6 +82,10 @@ public class QueryCountListener implements QueryExecutionListener {
         if (collectOtherThreads && !TestContextHolder.isInTest()) {
             OtherThreadQueries.add(new soon.springtestutil.querycount.context.QueryInfo(
                 queryType, sql, elapsedMs, parameters));
+            return;
+        }
+        if (!TestContextHolder.isInTest() && QueryCountContext.recordedCount() >= UNCOLLECTED_CAP) {
+            warnAboutUncollected();
             return;
         }
         QueryCountContext.addQuery(queryType, sql, elapsedMs, parameters);
@@ -111,6 +127,22 @@ public class QueryCountListener implements QueryExecutionListener {
                 }
             }
         }
+    }
+
+    /**
+     * 상한에 닿았다는 것을 한 번만 알립니다.
+     *
+     * <p>한 번 알렸으면 그대로 두는 것이 맞는 값이라, 테스트 사이에 리셋해야 했던 예전의
+     * static 플래그와 성질이 다릅니다.
+     */
+    private static void warnAboutUncollected() {
+        if (!warnedAboutUncollected.compareAndSet(false, true)) {
+            return;
+        }
+        log.warn("{} queries piled up on a thread that is not a test thread, and nothing clears "
+                + "them. Later ones are dropped. If these come from a server handling requests "
+                + "for an acceptance test, set query-counter.other-threads.enabled=true to count "
+                + "them instead.", UNCOLLECTED_CAP);
     }
 
     /**
