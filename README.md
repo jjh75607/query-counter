@@ -59,6 +59,10 @@ you want that range. The N+1 rule below follows how QuickPerf defines an N+1.
 CI builds against Spring Boot 3.0.0, 3.5.x and 4.1.x on every change, so the range above is
 verified rather than assumed. The library targets Java 17 bytecode, so it runs on any later JVM.
 
+Every change also publishes the artifact and has a separate consumer project resolve it and call
+it, on Spring Boot 3.0.0 and 4.1.0. **What is verified is the thing you download, not only the
+source in this repository.**
+
 ## Install
 
 Add the dependency to `build.gradle`. Nothing beyond `mavenCentral()` is needed.
