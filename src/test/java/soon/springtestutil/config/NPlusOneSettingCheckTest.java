@@ -9,8 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,12 +16,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("검사를 켰지만 카운팅을 켜지 않은 구성 안내")
 class NPlusOneSettingCheckTest {
 
+    // DataSource 도 AutoConfig 도 넣지 않는다. 이 확인은 Environment 만 읽으므로 필요하지 않고,
+    // Boot 4 에서 자동 설정 클래스의 패키지가 옮겨져 버전마다 다른 import 가 된다.
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-        .withConfiguration(AutoConfigurations.of(
-            DataSourceAutoConfiguration.class,
-            AutoConfig.class,
-            NPlusOneSettingCheck.class
-        ));
+        .withUserConfiguration(NPlusOneSettingCheck.class);
 
     private Logger logger;
 
