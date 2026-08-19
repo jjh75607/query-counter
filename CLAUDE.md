@@ -134,6 +134,12 @@ PR 본문에 배경과 판단을 적으면 이슈에 같은 내용을 한 번 �
 `QueryCountContext`, `QueryCountTestExtension`, `QueryCountTestExecutionListener`,
 `QueryCounterProperties` 다.
 
+### Javadoc 안의 코드 표기
+
+**`{@code ...}` 로 감싼다. 백틱을 쓰지 않는다.** 백틱은 Javadoc 에서 코드로 렌더링되지 않고
+문자 그대로 나온다. 마크다운을 쓰는 자리(README, 이 파일, PR 본문)와 갈리는 지점이라
+옮겨 적을 때 놓치기 쉽다.
+
 ### 다른 저장소의 이슈 번호
 
 **백틱으로 감싼다.** `` `quick-perf/quickperf#199` `` 처럼 쓴다.
