@@ -395,6 +395,9 @@ query-counter:
     enabled: true
 ```
 
+Forgetting the first one logs a warning at startup, since the check silently doing nothing is worse
+than being told.
+
 **It only warns until you also set `fail`.** Turning the check on in a suite that never had it will
 surface every N+1 already there, all at once. Failing all of them on the first run leaves nothing to
 do but switch the check back off, so the order is: turn it on, read the list, work through it, then
