@@ -62,6 +62,29 @@ querycount/
 있으므로 별도 상태를 두지 않는다. 예전에 static 플래그를 썼다가 리셋되지 않아 테스트
 불가능해져서 걷어냈다.
 
+### 슬라이스 테스트는 자동 설정을 목록으로 골라 켠다
+
+`@DataJpaTest` 는 자동 설정을 전부 켜지 않는다. 목록에 있는 것만 켜므로, 서드파티인 우리가
+목록에 없으면 **DB 를 실제로 때리는 그 테스트에서 쿼리가 하나도 기록되지 않는다.** 실패하지
+않고 조용히 안 도는 종류다.
+
+그 목록에 들어가려고 `src/main/resources/META-INF/spring/` 에 등록 파일 둘을 둔다. 이름이
+Spring Boot 버전마다 다르다.
+
+| 버전 | 파일 이름 |
+|---|---|
+| 3.x | `org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureDataJpa.imports` |
+| 4.x | `org.springframework.boot.data.jpa.test.autoconfigure.AutoConfigureDataJpa.imports` |
+
+모르는 쪽은 무시되므로 둘 다 두는 것이 맞다. 목록에 있어도 `enabled=true` 조건은 그대로라
+"켜지 않으면 아무 영향이 없다" 는 성질은 깨지지 않는다.
+
+**슬라이스가 늘면 파일도 늘어난다.** `@JdbcTest` 와 `@DataJdbcTest` 는 아직 넣지 않았다.
+
+`SliceTestImportsTest` 가 파일의 존재와 내용을 고정한다. 실제 `@DataJpaTest` 안에서 기록되는지는
+그 테스트가 보지 못한다 — 애노테이션 import 경로가 버전마다 달라 한 소스로 두 버전을 컴파일할
+수 없다. 그쪽은 실제 프로젝트에 붙여 확인한다.
+
 ### 조용히 안 도는 구성은 경고로 알린다
 
 `query-counter.n-plus-one.enabled=true` 만 켜면 아무 일도 일어나지 않는다. `AutoConfig`가
