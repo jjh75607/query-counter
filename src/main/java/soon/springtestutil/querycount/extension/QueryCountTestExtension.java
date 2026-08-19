@@ -41,6 +41,8 @@ public class QueryCountTestExtension implements BeforeEachCallback, AfterEachCal
             // 테스트가 다른 이유로 이미 실패했으면 자동 검증을 건너뛴다.
             // 그러지 않으면 진짜 실패 위에 쿼리 카운트 실패가 덮여 원인이 가려진다.
             if (context.getExecutionException().isEmpty()) {
+                // 판정보다 먼저 합친다. 합치기 전에 판정하면 합친 의미가 없다.
+                QueryCountContext.mergeOtherThreadQueries();
                 QueryCounterAssertion.verifyPending();
                 NPlusOneWatch.run();
             }

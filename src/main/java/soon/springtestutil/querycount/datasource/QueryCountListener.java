@@ -8,6 +8,7 @@ import net.ttddyy.dsproxy.proxy.ParameterSetOperation;
 import soon.springtestutil.core.context.TestContextHolder;
 import soon.springtestutil.querycount.NPlusOneCheck;
 import soon.springtestutil.querycount.QueryType;
+import soon.springtestutil.querycount.context.OtherThreadQueries;
 import soon.springtestutil.querycount.context.QueryCountContext;
 
 import java.util.ArrayList;
@@ -22,12 +23,44 @@ public class QueryCountListener implements QueryExecutionListener {
 
     private final NPlusOneCheck nPlusOneCheck;
 
+    private final boolean collectOtherThreads;
+
     public QueryCountListener() {
-        this(NPlusOneCheck.OFF);
+        this(NPlusOneCheck.OFF, false);
     }
 
     public QueryCountListener(NPlusOneCheck nPlusOneCheck) {
+        this(nPlusOneCheck, false);
+    }
+
+    public QueryCountListener(NPlusOneCheck nPlusOneCheck, boolean collectOtherThreads) {
         this.nPlusOneCheck = nPlusOneCheck;
+        this.collectOtherThreads = collectOtherThreads;
+    }
+
+    /**
+     * 기록을 어디에 담을지 고릅니다.
+     *
+     * <p>켜져 있고 테스트 스레드가 아니면 공용 수집소에 담습니다. 그 밖에는 지금까지처럼 이
+     * 스레드의 기록에 담습니다.
+     *
+     * <p><b>꺼져 있을 때의 동작을 바꾸지 않습니다.</b> 테스트 스레드가 아닌 곳의 기록을 버리는
+     * 쪽으로 바꿔 봤더니 리스너를 직접 부르는 기존 테스트 다섯 개가 깨졌다. 활성화하지 않은
+     * 사용자에게 영향을 주지 않는 것이 이 라이브러리의 첫 성질이므로 그 방향은 버렸다.
+     */
+    static void route(
+        boolean collectOtherThreads,
+        QueryType queryType,
+        String sql,
+        Long elapsedMs,
+        List<List<Object>> parameters
+    ) {
+        if (collectOtherThreads && !TestContextHolder.isInTest()) {
+            OtherThreadQueries.add(new soon.springtestutil.querycount.context.QueryInfo(
+                queryType, sql, elapsedMs, parameters));
+            return;
+        }
+        QueryCountContext.addQuery(queryType, sql, elapsedMs, parameters);
     }
 
     @Override
@@ -54,7 +87,7 @@ public class QueryCountListener implements QueryExecutionListener {
             if (sql != null && !sql.trim().isEmpty()) {
                 try {
                     QueryType queryType = queryTypeCache.computeIfAbsent(sql, QueryType::from);
-                    QueryCountContext.addQuery(queryType, sql, elapsedMs, extractParameters(queryInfo));
+                    route(collectOtherThreads, queryType, sql, elapsedMs, extractParameters(queryInfo));
                 } catch (IllegalArgumentException e) {
                     String contextInfo = TestContextHolder.getContextInfo();
                     log.warn("{}Cannot determine query type for: [{}]. Error: {}",

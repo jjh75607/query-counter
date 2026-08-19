@@ -50,6 +50,18 @@ public final class QueryCountContext {
     }
 
     /**
+     * 다른 스레드에서 모아 둔 쿼리를 이 스레드의 기록에 합칩니다.
+     *
+     * <p>테스트가 끝날 때 판정보다 먼저 부릅니다. 합치기 전에 판정하면 합친 의미가 없습니다.
+     */
+    public static void mergeOtherThreadQueries() {
+        List<QueryInfo> drained = OtherThreadQueries.drain();
+        if (!drained.isEmpty()) {
+            queries.get().addAll(drained);
+        }
+    }
+
+    /**
      * Records how the N+1 check should behave for the current test.
      *
      * <p>Internal wiring rather than part of the assertion API. The setting lives in the
@@ -84,6 +96,7 @@ public final class QueryCountContext {
     public static void clear() {
         queries.remove();
         nPlusOneCheck.remove();
+        OtherThreadQueries.clear();
     }
 
 }

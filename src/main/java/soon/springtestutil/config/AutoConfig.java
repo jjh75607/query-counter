@@ -33,9 +33,12 @@ public class AutoConfig {
             .getProperty("query-counter.n-plus-one.enabled", Boolean.class, false);
         boolean nPlusOneFail = environment
             .getProperty("query-counter.n-plus-one.fail", Boolean.class, false);
+        boolean collectOtherThreads = environment
+            .getProperty("query-counter.other-threads.enabled", Boolean.class, false);
         return new DataSourceProxyBeanPostProcessor(
             loggingEnabled,
-            NPlusOneCheck.of(nPlusOneEnabled, nPlusOneFail)
+            NPlusOneCheck.of(nPlusOneEnabled, nPlusOneFail),
+            collectOtherThreads
         );
     }
 
