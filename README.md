@@ -337,6 +337,17 @@ N+1 assertion failed: 1 query shape ran with different parameter values
     params: [1], [2], [3]
 ```
 
+The check that runs for every test uses the same layout with a different first line, `N+1 detected`
+while it only warns and `N+1 check failed` once `fail` is set:
+
+```text
+java.lang.AssertionError: [Test: {package}.{class}#{method}]
+N+1 check failed: 1 query shape ran with different parameter values
+[1] 3 executions, 3 distinct parameter values
+    SQL: select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+    params: [1], [2], [3]
+```
+
 When an assertion fails and no query was recorded at all, the message adds a reminder, because the
 usual cause is a missing setting:
 
@@ -350,15 +361,40 @@ No query was recorded. Is query-counter.enabled=true set in your test configurat
 |---|---|---|
 | `query-counter.enabled` | `false` | Count queries. When enabled, the DataSource is wrapped in a proxy that records every executed query |
 | `query-counter.logging.enabled` | `false` | Log every executed SQL statement through SLF4J. Independent of counting, and off by default because always-on SQL logging is noisy in projects with many tests |
+| `query-counter.n-plus-one.enabled` | `false` | Check every test for an N+1, with nothing written in the test |
+| `query-counter.n-plus-one.fail` | `false` | Fail the test when that check finds one. When false it is logged as a warning |
 
 ```yaml
 query-counter:
   enabled: true
   logging:
     enabled: false
+  n-plus-one:
+    enabled: false
+    fail: false
 ```
 
-Both properties appear with descriptions in IDE autocompletion.
+Every property appears with a description in IDE autocompletion.
+
+### Checking every test for an N+1
+
+`noNPlusOne()` covers the test you write it in. That means a suite with hundreds of existing tests
+gets no cover at all, which is where an N+1 you fixed six months ago comes back.
+
+Turning on `query-counter.n-plus-one.enabled` runs the same check at the end of every test, with
+nothing written in the test.
+
+**It only warns until you also set `fail`.** Turning the check on in a suite that never had it will
+surface every N+1 already there, all at once. Failing all of them on the first run leaves nothing to
+do but switch the check back off, so the order is: turn it on, read the list, work through it, then
+set `fail: true` to keep it from coming back.
+
+The rule is the same one `noNPlusOne()` uses: the same SELECT running with different parameter
+values. Repeats with identical values are duplicate reads, not an N+1, and are not reported.
+
+Two limits are worth knowing. A test that deliberately reads in a loop is reported like any other,
+so it needs `fail: false` or a rewritten test. And queries executed on another thread are not
+recorded at all, which is a property of the counting itself, not of this check.
 
 ## Changelog
 

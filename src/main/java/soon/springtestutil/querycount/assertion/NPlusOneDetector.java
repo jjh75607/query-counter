@@ -9,6 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 같은 SELECT 가 서로 다른 파라미터 값으로 반복 실행됐는지 찾습니다.
@@ -28,6 +29,43 @@ final class NPlusOneDetector {
      * @param distinctParameters 서로 달랐던 파라미터 값들
      */
     record Finding(String sql, int executionCount, List<List<List<Object>>> distinctParameters) {
+    }
+
+    private static final int MAX_FINDINGS_TO_REPORT = 3;
+
+    /**
+     * 찾은 것을 사람이 읽을 문장으로 만듭니다. 어서션 실패와 전역 검사가 같은 형식을
+     * 쓰도록 여기 둡니다.
+     *
+     * @param headline 첫 줄. 실패인지 보고인지에 따라 달라집니다
+     */
+    static String format(List<Finding> findings, String headline) {
+        StringBuilder sb = new StringBuilder(headline);
+
+        int reportCount = Math.min(findings.size(), MAX_FINDINGS_TO_REPORT);
+        for (int i = 0; i < reportCount; i++) {
+            Finding finding = findings.get(i);
+            sb.append(String.format("\n[%d] %d executions, %d distinct parameter values\n    SQL: %s\n    params: %s",
+                i + 1,
+                finding.executionCount(),
+                finding.distinctParameters().size(),
+                finding.sql(),
+                describeParameters(finding.distinctParameters())));
+        }
+
+        if (findings.size() > MAX_FINDINGS_TO_REPORT) {
+            sb.append(String.format("\n... and %d more", findings.size() - MAX_FINDINGS_TO_REPORT));
+        }
+
+        return sb.toString();
+    }
+
+    private static String describeParameters(List<List<List<Object>>> distinctParameters) {
+        return distinctParameters.stream()
+            .limit(MAX_FINDINGS_TO_REPORT)
+            .map(sets -> sets.size() == 1 ? sets.get(0).toString() : sets.toString())
+            .collect(Collectors.joining(", "))
+            + (distinctParameters.size() > MAX_FINDINGS_TO_REPORT ? ", ..." : "");
     }
 
     static List<Finding> detect(List<QueryInfo> queries) {

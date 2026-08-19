@@ -12,6 +12,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.PriorityOrdered;
 import org.springframework.util.ReflectionUtils;
+import soon.springtestutil.querycount.NPlusOneCheck;
 import soon.springtestutil.querycount.datasource.QueryCountListener;
 
 import javax.sql.DataSource;
@@ -35,8 +36,15 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
 
     private final boolean loggingEnabled;
 
+    private final NPlusOneCheck nPlusOneCheck;
+
     public DataSourceProxyBeanPostProcessor(boolean loggingEnabled) {
+        this(loggingEnabled, NPlusOneCheck.OFF);
+    }
+
+    public DataSourceProxyBeanPostProcessor(boolean loggingEnabled, NPlusOneCheck nPlusOneCheck) {
         this.loggingEnabled = loggingEnabled;
+        this.nPlusOneCheck = nPlusOneCheck;
     }
 
     /**
@@ -63,7 +71,7 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
             ProxyFactory factory = new ProxyFactory(bean);
             factory.setProxyTargetClass(true); // 다양한 DataSource 구현체를 지원하기 위해 CGLIB 프록시 사용
             factory.addInterface(QueryCountedDataSource.class);
-            factory.addAdvice(ProxyDataSourceInterceptor.of(dataSource, this.loggingEnabled));
+            factory.addAdvice(ProxyDataSourceInterceptor.of(dataSource, this.loggingEnabled, this.nPlusOneCheck));
             return factory.getProxy();
         }
 
@@ -118,12 +126,16 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
      */
     private record ProxyDataSourceInterceptor(DataSource dataSource) implements MethodInterceptor {
 
-        private static ProxyDataSourceInterceptor of(DataSource dataSource, boolean loggingEnabled) {
+        private static ProxyDataSourceInterceptor of(
+            DataSource dataSource,
+            boolean loggingEnabled,
+            NPlusOneCheck nPlusOneCheck
+        ) {
             ChainListener listener = new ChainListener();
             if (loggingEnabled) {
                 listener.addListener(new SLF4JQueryLoggingListener());
             }
-            listener.addListener(new QueryCountListener());
+            listener.addListener(new QueryCountListener(nPlusOneCheck));
 
             return new ProxyDataSourceInterceptor(
                 ProxyDataSourceBuilder.create(dataSource)

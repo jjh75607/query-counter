@@ -336,6 +336,17 @@ N+1 assertion failed: 1 query shape ran with different parameter values
     params: [1], [2], [3]
 ```
 
+모든 테스트에서 도는 검사는 같은 형식에 첫 줄만 다릅니다. 경고만 남길 때는 `N+1 detected`,
+`fail` 을 켜면 `N+1 check failed` 입니다.
+
+```text
+java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}]
+N+1 check failed: 1 query shape ran with different parameter values
+[1] 3 executions, 3 distinct parameter values
+    SQL: select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+    params: [1], [2], [3]
+```
+
 검증이 실패했는데 기록된 쿼리가 하나도 없으면 안내가 덧붙습니다. 대개 설정을 빠뜨린 경우입니다.
 
 ```text
@@ -348,15 +359,40 @@ No query was recorded. Is query-counter.enabled=true set in your test configurat
 |---|---|---|
 | `query-counter.enabled` | `false` | 쿼리 카운팅. 켜면 DataSource를 프록시로 감싸 실행된 쿼리를 기록합니다 |
 | `query-counter.logging.enabled` | `false` | 실행된 SQL을 SLF4J로 출력합니다. 카운팅과 별개이며, 항상 켜져 있으면 테스트가 많은 프로젝트에서 로그가 오염되므로 기본값은 꺼짐입니다 |
+| `query-counter.n-plus-one.enabled` | `false` | 테스트에 아무것도 안 적고, 모든 테스트에서 N+1 을 검사합니다 |
+| `query-counter.n-plus-one.fail` | `false` | 그 검사가 N+1 을 찾으면 실패시킵니다. 꺼져 있으면 경고 로그만 남깁니다 |
 
 ```yaml
 query-counter:
   enabled: true
   logging:
     enabled: false
+  n-plus-one:
+    enabled: false
+    fail: false
 ```
 
-두 프로퍼티 모두 IDE 자동완성에 설명과 함께 표시됩니다.
+모든 프로퍼티가 IDE 자동완성에 설명과 함께 표시됩니다.
+
+### 모든 테스트에서 N+1 을 검사하기
+
+`noNPlusOne()` 은 그것을 적은 테스트만 덮습니다. 그러면 테스트가 이미 수백 개인 스위트는
+아무것도 못 덮는데, 6개월 전에 고친 N+1 이 돌아오는 자리가 바로 거기입니다.
+
+`query-counter.n-plus-one.enabled` 를 켜면 같은 검사가 모든 테스트 끝에서 돕니다. 테스트에는
+아무것도 안 적습니다.
+
+**`fail` 을 함께 켜기 전까지는 경고만 남깁니다.** 한 번도 검사한 적 없는 스위트에 켜면 이미
+있던 N+1 이 한꺼번에 다 드러납니다. 첫 실행에서 그것들을 전부 실패시키면 검사를 다시 끄는 것
+말고는 할 수 있는 일이 없으니, 순서는 이렇습니다. 켜서 목록을 읽고, 하나씩 고치고, 그다음
+`fail: true` 로 돌아오지 못하게 막습니다.
+
+판정 기준은 `noNPlusOne()` 과 같습니다. 같은 SELECT 가 파라미터 값을 바꿔 여러 번 실행된
+경우입니다. 값까지 같은 반복은 N+1 이 아니라 중복 조회이므로 보고하지 않습니다.
+
+알아둘 한계가 둘 있습니다. 일부러 반복문에서 조회하는 테스트도 똑같이 보고되므로 그 경우는
+`fail: false` 로 두거나 테스트를 바꿔야 합니다. 그리고 다른 스레드에서 실행된 쿼리는 애초에
+기록되지 않는데, 이것은 이 검사가 아니라 카운팅 자체의 성질입니다.
 
 ## 변경 이력
 
