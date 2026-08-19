@@ -6,7 +6,10 @@ plugins {
 
 // com.github.* 는 github.com 소유자가 아니면 Central 네임스페이스를 받을 수 없다.
 group = 'io.github.jjh75607'
-version = '0.3.0'
+
+// CI 의 소비자 스모크 테스트가 -PpublishVersion 으로 SNAPSHOT 을 발행한다.
+// SNAPSHOT 은 서명을 건너뛰므로 키 없이 로컬 저장소로 낼 수 있다.
+version = findProperty('publishVersion') ?: '0.3.0'
 
 java {
     toolchain {

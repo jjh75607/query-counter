@@ -38,6 +38,10 @@ querycount/
 
 흐름은 세 층이다. **수집(Listener, Context) → 명세(Assertion) → 검증(Verifier).**
 
+`smoke/` 는 루트 빌드에 포함되지 않는 별도 프로젝트다. 발행물을 Maven 저장소에서 받아
+소비자로서 호출한다. 루트 빌드에 넣으면 프로젝트 소스를 그대로 쓰게 되어 검증 대상이
+사라진다.
+
 ## 주의할 지점
 
 ### BeanPostProcessor에 프로퍼티 빈을 주입하지 않는다
@@ -130,6 +134,12 @@ PR 본문에 배경과 판단을 적으면 이슈에 같은 내용을 한 번 �
 `QueryCountContext`, `QueryCountTestExtension`, `QueryCountTestExecutionListener`,
 `QueryCounterProperties` 다.
 
+### Javadoc 안의 코드 표기
+
+**`{@code ...}` 로 감싼다. 백틱을 쓰지 않는다.** 백틱은 Javadoc 에서 코드로 렌더링되지 않고
+문자 그대로 나온다. 마크다운을 쓰는 자리(README, 이 파일, PR 본문)와 갈리는 지점이라
+옮겨 적을 때 놓치기 쉽다.
+
 ### 다른 저장소의 이슈 번호
 
 **백틱으로 감싼다.** `` `quick-perf/quickperf#199` `` 처럼 쓴다.
@@ -169,6 +179,10 @@ PR 본문에 배경과 판단을 적으면 이슈에 같은 내용을 한 번 �
 ./gradlew build
 ./gradlew test --tests '*AutoConfigTest*'
 ./gradlew spotlessApply
+
+# 발행물을 소비자로서 받아 호출한다. 로컬에서 돌릴 때도 발행이 먼저다
+./gradlew publishToMavenLocal -PpublishVersion=0.0.0-SMOKE-SNAPSHOT
+./gradlew -p smoke test -PlibraryVersion=0.0.0-SMOKE-SNAPSHOT -PspringBootVersion=4.1.0
 ```
 
 포맷 검사는 Spotless 다. `spotlessCheck` 가 `check` 에 물려 있어 `./gradlew build` 와
@@ -199,6 +213,10 @@ JitPack 으로 내던 시절의 것이고 2026-08-13 에 그 경로를 접었다
    이걸 누르기 전에는 아무도 받을 수 없다
 5. `verify-release.yml` 을 태그를 넣어 수동 실행한다. 공개를 누른 뒤에 도는 것이라 자동
    실행은 걸어두지 않았다
+
+**발행 검증은 두 층이다.** CI 의 `smoke` 잡이 매 변경에서 로컬 저장소로 낸 SNAPSHOT 을 소비자
+프로젝트가 받아 호출한다. `verify-release.yml` 은 릴리스 뒤에 Central 의 실물을 본다. 앞엣것이
+없던 동안 `0.2.0` 이 설치 불가 상태로 나갔다. **릴리스 뒤에만 도는 검증은 늦다.**
 
 **`build.gradle` 의 `version` 이 유일한 출처다.** 태그는 거기에 `v` 를 붙인 것이고,
 워크플로가 둘이 같은지 검사한다. Central 버전에는 `v` 가 없다.
@@ -232,7 +250,14 @@ Central 은 서명 없는 아티팩트를 받지 않는다. 서명 키는 저장
 `-PsigningInMemoryKey` 와 `-PsigningInMemoryKeyPassword` 로 키를 넘긴다.
 
 `-Pversion=0.3.0-SNAPSHOT` 으로 서명을 건너뛰려는 시도는 통하지 않는다. `build.gradle` 이
-`version` 을 직접 대입하고 있어서 명령줄 프로퍼티가 덮이지 않는다. 확인해 봤다.
+`version` 을 직접 대입하고 있어서 명령줄 프로퍼티가 덮이지 않는다.
+
+그래서 그 자리를 `-PpublishVersion` 으로 열어 두었다. `version = findProperty('publishVersion') ?: '0.3.0'`
+이고, SNAPSHOT 을 넘기면 `signMavenPublication` 이 SKIPPED 되어 키 없이
+`publishToMavenLocal` 이 된다. **소비자 스모크 테스트 전용이다.**
+
+**릴리스에는 쓰지 않는다.** `release.yml` 은 이 프로퍼티를 넘기지 않고 리터럴 기본값을 읽어
+태그와 대조하므로, 이걸로 발행하면 그 검사를 우회하게 된다. 리터럴이 여전히 유일한 출처다.
 
 ## 하지 않을 것
 
