@@ -22,12 +22,45 @@ jobs:
         env:
           GITHUB_REF_TAG: ${{ github.event.inputs.tag }}
 
+      # Central 은 Publish 를 누른 뒤 repo1 로 동기화되기까지 몇 분에서 수십 분 걸린다.
+      # 전파 지연을 그냥 404 로 내면 사람이 릴리스가 깨졌다고 읽는다. 0.4.0 에서 Publish
+      # 직후에 돌려 실제로 그렇게 됐다. 그래서 기다려 본 다음에 실패시키고, 실패할 때는
+      # 무엇을 확인해야 하는지 함께 낸다.
       - name: Download the POM and the jar
+        env:
+          ATTEMPTS: '30'
+          DELAY: '30'
         run: |
           VERSION='${{ steps.version.outputs.value }}'
           BASE="https://repo1.maven.org/maven2/io/github/jjh75607/query-counter/$VERSION"
-          curl -sS -f --max-time 120 -o pom.xml "$BASE/query-counter-$VERSION.pom"
-          curl -sS -f --max-time 120 -o library.jar "$BASE/query-counter-$VERSION.jar"
+
+          fetch() {
+            for i in $(seq 1 "$ATTEMPTS"); do
+              if curl -sS -f --max-time 60 -o "$2" "$1"; then
+                echo "받았다: $(basename "$1") ($i/$ATTEMPTS)"
+                return 0
+              fi
+              if [ "$i" = "$ATTEMPTS" ]; then
+                return 1
+              fi
+              echo "아직 없다: $(basename "$1"). ${DELAY}초 뒤에 다시 본다 ($i/$ATTEMPTS)"
+              sleep "$DELAY"
+            done
+          }
+
+          if ! fetch "$BASE/query-counter-$VERSION.pom" pom.xml; then
+            echo "" >&2
+            echo "$((ATTEMPTS * DELAY))초를 기다렸는데 $VERSION 이 repo1 에 없다. 셋을 확인한다." >&2
+            echo "" >&2
+            echo "  1. Central 포털에서 Publish 를 눌렀는가. 누르기 전에는 올라가 있어도 나가지 않는다" >&2
+            echo "  2. 눌렀다면 그 배포가 PUBLISHED 인가. 아직 처리 중이면 조금 뒤에 이것을 다시 돌린다" >&2
+            echo "  3. 둘 다 맞는데 없으면 좌표나 버전을 확인한다" >&2
+            echo "" >&2
+            echo "  https://central.sonatype.com/publishing/deployments" >&2
+            exit 1
+          fi
+
+          fetch "$BASE/query-counter-$VERSION.jar" library.jar || exit 1
           test -s library.jar || { echo "jar 가 비어 있다"; exit 1; }
 
       - name: Check POM coordinates
