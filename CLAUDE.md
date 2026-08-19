@@ -283,7 +283,11 @@ JitPack 으로 내던 시절의 것이고 2026-08-13 에 그 경로를 접었다
 4. `https://central.sonatype.com/publishing/deployments` 에서 확인하고 Publish 를 누른다.
    이걸 누르기 전에는 아무도 받을 수 없다
 5. `verify-release.yml` 을 태그를 넣어 수동 실행한다. 공개를 누른 뒤에 도는 것이라 자동
-   실행은 걸어두지 않았다
+   실행은 걸어두지 않았다. 명령으로는 `gh workflow run verify-release.yml -f tag=v0.4.0` 이다
+
+**Publish 를 누른 뒤 `repo1.maven.org` 에 퍼지기까지 몇 분에서 수십 분 걸린다.** 4번과 5번
+사이의 이 시차를 모르면 5번의 404 를 릴리스 실패로 읽는다. `0.4.0` 에서 실제로 그랬다.
+그래서 5번은 최대 15분까지 기다려 보고, 그래도 없으면 무엇을 확인해야 하는지 함께 낸다.
 
 **발행 검증은 두 층이다.** CI 의 `smoke` 잡이 매 변경에서 로컬 저장소로 낸 SNAPSHOT 을 소비자
 프로젝트가 받아 호출한다. `verify-release.yml` 은 릴리스 뒤에 Central 의 실물을 본다. 앞엣것이
