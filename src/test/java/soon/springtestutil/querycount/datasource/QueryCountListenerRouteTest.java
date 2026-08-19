@@ -55,6 +55,38 @@ class QueryCountListenerRouteTest {
         assertThat(OtherThreadQueries.size()).isEqualTo(1);
     }
 
+    @DisplayName("테스트 스레드가 아닌 기록은 상한까지만 담는다")
+    @Test
+    void routeShouldStopAtTheCapOffTestThread() {
+        // given - 아무도 비우지 않는 기록이라 무한히 쌓이면 안 된다
+        for (int i = 0; i < QueryCountListener.UNCOLLECTED_CAP; i++) {
+            record(false);
+        }
+
+        // when
+        record(false);
+
+        // then
+        assertThat(QueryCountContext.recordedCount()).isEqualTo(QueryCountListener.UNCOLLECTED_CAP);
+    }
+
+    @DisplayName("테스트 스레드에서는 상한을 넘겨도 계속 담는다")
+    @Test
+    void routeShouldIgnoreTheCapOnTestThread() {
+        // given - 테스트 끝에 비워지는 기록이라 쌓일 일이 없다
+        TestContextHolder.setContext("SomeTest", "someMethod");
+        for (int i = 0; i < QueryCountListener.UNCOLLECTED_CAP; i++) {
+            record(false);
+        }
+
+        // when
+        record(false);
+
+        // then
+        assertThat(QueryCountContext.recordedCount())
+            .isEqualTo(QueryCountListener.UNCOLLECTED_CAP + 1);
+    }
+
     @DisplayName("꺼져 있으면 테스트 스레드가 아니어도 지금까지처럼 이 스레드에 담는다")
     @Test
     void routeShouldKeepOldBehaviourWhenDisabled() {

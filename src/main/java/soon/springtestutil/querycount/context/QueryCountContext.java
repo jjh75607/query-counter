@@ -106,6 +106,15 @@ public final class QueryCountContext {
         return new ArrayList<>(queries.get());
     }
 
+    /**
+     * 지금 스레드에 기록된 쿼리 개수입니다.
+     *
+     * <p>{@link #getQueries()} 는 복사본을 만들므로 쿼리마다 개수를 물을 때 쓸 수 없습니다.
+     */
+    public static int recordedCount() {
+        return queries.get().size();
+    }
+
     public static EnumMap<QueryType, Long> getQueryCounts() {
         return queries.get().stream()
             .collect(Collectors.groupingBy(
