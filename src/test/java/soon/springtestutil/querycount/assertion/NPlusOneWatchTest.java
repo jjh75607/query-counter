@@ -1,15 +1,21 @@
 package soon.springtestutil.querycount.assertion;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import soon.springtestutil.querycount.NPlusOneCheck;
 import soon.springtestutil.querycount.QueryType;
 import soon.springtestutil.querycount.context.QueryCountContext;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -51,6 +57,33 @@ class NPlusOneWatchTest {
 
         // when, then
         assertThatCode(NPlusOneWatch::run).doesNotThrowAnyException();
+    }
+
+    @DisplayName("보고 모드는 찾은 것을 경고 로그로 남기고 SQL 을 함께 적는다")
+    @Test
+    void runShouldLogWarningInReportMode() {
+        // given
+        Logger logger = (Logger) LoggerFactory.getLogger(NPlusOneWatch.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+
+        recordNPlusOne();
+        QueryCountContext.requestNPlusOneCheck(NPlusOneCheck.REPORT);
+
+        // when
+        NPlusOneWatch.run();
+        logger.detachAppender(appender);
+
+        // then - 실패시키지 않는 모드이므로 로그가 유일한 산출물이다
+        assertThat(appender.list)
+            .singleElement()
+            .satisfies(event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                assertThat(event.getFormattedMessage())
+                    .contains("N+1 detected")
+                    .contains(SELECT_TEAM);
+            });
     }
 
     @DisplayName("실패 모드면 N+1 을 찾아 실패시키고 SQL 을 함께 낸다")

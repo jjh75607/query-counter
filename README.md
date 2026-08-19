@@ -392,6 +392,36 @@ set `fail: true` to keep it from coming back.
 The rule is the same one `noNPlusOne()` uses: the same SELECT running with different parameter
 values. Repeats with identical values are duplicate reads, not an N+1, and are not reported.
 
+Nothing is written in the test. The example below is a real test in
+[`src/test/java/soon/springtestutil/example/GlobalNPlusOneExampleTest.java`](src/test/java/soon/springtestutil/example/GlobalNPlusOneExampleTest.java),
+so it compiles and runs with `./gradlew build`.
+
+```java
+@SpringBootTest(classes = ExampleApplication.class, properties = {
+    "query-counter.enabled=true",
+    "query-counter.n-plus-one.enabled=true"
+})
+@Transactional
+class GlobalNPlusOneExampleTest {
+
+    @Test
+    void reportsNPlusOneWithoutAnyAssertion() {
+        // given
+        saveMembersInSeparateTeams(3);
+        QueryCountContext.clear();
+
+        // when - members are read, then each team name is touched
+        memberRepository.findAllLazily().forEach(member -> member.getTeam().getName());
+
+        // then - there is nothing to write. The check runs once this method returns
+    }
+
+}
+```
+
+That test passes, and the warning it produces looks like the message below. With `fail: true` the
+same finding fails the test instead.
+
 Two limits are worth knowing. A test that deliberately reads in a loop is reported like any other,
 so it needs `fail: false` or a rewritten test. And queries executed on another thread are not
 recorded at all, which is a property of the counting itself, not of this check.

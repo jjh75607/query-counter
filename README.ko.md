@@ -390,6 +390,36 @@ query-counter:
 판정 기준은 `noNPlusOne()` 과 같습니다. 같은 SELECT 가 파라미터 값을 바꿔 여러 번 실행된
 경우입니다. 값까지 같은 반복은 N+1 이 아니라 중복 조회이므로 보고하지 않습니다.
 
+테스트에는 아무것도 적지 않습니다. 아래 예제는
+[`src/test/java/soon/springtestutil/example/GlobalNPlusOneExampleTest.java`](src/test/java/soon/springtestutil/example/GlobalNPlusOneExampleTest.java)
+의 실제 테스트라 `./gradlew build` 로 컴파일되고 실행됩니다.
+
+```java
+@SpringBootTest(classes = ExampleApplication.class, properties = {
+    "query-counter.enabled=true",
+    "query-counter.n-plus-one.enabled=true"
+})
+@Transactional
+class GlobalNPlusOneExampleTest {
+
+    @Test
+    void reportsNPlusOneWithoutAnyAssertion() {
+        // given
+        saveMembersInSeparateTeams(3);
+        QueryCountContext.clear();
+
+        // when - 회원을 읽고 각자의 팀 이름을 꺼낸다
+        memberRepository.findAllLazily().forEach(member -> member.getTeam().getName());
+
+        // then - 적을 것이 없다. 검사는 이 메서드가 끝난 뒤에 돈다
+    }
+
+}
+```
+
+이 테스트는 통과하고, 남는 경고는 아래 메시지 형식과 같습니다. `fail: true` 면 같은 것이
+테스트를 실패시킵니다.
+
 알아둘 한계가 둘 있습니다. 일부러 반복문에서 조회하는 테스트도 똑같이 보고되므로 그 경우는
 `fail: false` 로 두거나 테스트를 바꿔야 합니다. 그리고 다른 스레드에서 실행된 쿼리는 애초에
 기록되지 않는데, 이것은 이 검사가 아니라 카운팅 자체의 성질입니다.
