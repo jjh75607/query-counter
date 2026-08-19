@@ -13,6 +13,7 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.PriorityOrdered;
 import org.springframework.util.ReflectionUtils;
 import soon.springtestutil.querycount.NPlusOneCheck;
+import soon.springtestutil.querycount.QueryLimit;
 import soon.springtestutil.querycount.datasource.QueryCountListener;
 
 import javax.sql.DataSource;
@@ -40,12 +41,14 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
 
     private final boolean collectOtherThreads;
 
+    private final QueryLimit queryLimit;
+
     public DataSourceProxyBeanPostProcessor(boolean loggingEnabled) {
-        this(loggingEnabled, NPlusOneCheck.OFF, false);
+        this(loggingEnabled, NPlusOneCheck.OFF, false, QueryLimit.OFF);
     }
 
     public DataSourceProxyBeanPostProcessor(boolean loggingEnabled, NPlusOneCheck nPlusOneCheck) {
-        this(loggingEnabled, nPlusOneCheck, false);
+        this(loggingEnabled, nPlusOneCheck, false, QueryLimit.OFF);
     }
 
     public DataSourceProxyBeanPostProcessor(
@@ -53,9 +56,19 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
         NPlusOneCheck nPlusOneCheck,
         boolean collectOtherThreads
     ) {
+        this(loggingEnabled, nPlusOneCheck, collectOtherThreads, QueryLimit.OFF);
+    }
+
+    public DataSourceProxyBeanPostProcessor(
+        boolean loggingEnabled,
+        NPlusOneCheck nPlusOneCheck,
+        boolean collectOtherThreads,
+        QueryLimit queryLimit
+    ) {
         this.loggingEnabled = loggingEnabled;
         this.nPlusOneCheck = nPlusOneCheck;
         this.collectOtherThreads = collectOtherThreads;
+        this.queryLimit = queryLimit;
     }
 
     /**
@@ -83,7 +96,8 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
             factory.setProxyTargetClass(true); // 다양한 DataSource 구현체를 지원하기 위해 CGLIB 프록시 사용
             factory.addInterface(QueryCountedDataSource.class);
             factory.addAdvice(ProxyDataSourceInterceptor.of(
-                dataSource, this.loggingEnabled, this.nPlusOneCheck, this.collectOtherThreads));
+                dataSource, this.loggingEnabled, this.nPlusOneCheck, this.collectOtherThreads,
+                this.queryLimit));
             return factory.getProxy();
         }
 
@@ -142,13 +156,14 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
             DataSource dataSource,
             boolean loggingEnabled,
             NPlusOneCheck nPlusOneCheck,
-            boolean collectOtherThreads
+            boolean collectOtherThreads,
+            QueryLimit queryLimit
         ) {
             ChainListener listener = new ChainListener();
             if (loggingEnabled) {
                 listener.addListener(new SLF4JQueryLoggingListener());
             }
-            listener.addListener(new QueryCountListener(nPlusOneCheck, collectOtherThreads));
+            listener.addListener(new QueryCountListener(nPlusOneCheck, collectOtherThreads, queryLimit));
 
             return new ProxyDataSourceInterceptor(
                 ProxyDataSourceBuilder.create(dataSource)

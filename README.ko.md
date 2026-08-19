@@ -362,6 +362,8 @@ No query was recorded. Is query-counter.enabled=true set in your test configurat
 | `query-counter.n-plus-one.enabled` | `false` | 테스트에 아무것도 안 적고, 모든 테스트에서 N+1 을 검사합니다 |
 | `query-counter.n-plus-one.fail` | `false` | 그 검사가 N+1 을 찾으면 실패시킵니다. 꺼져 있으면 경고 로그만 남깁니다 |
 | `query-counter.other-threads.enabled` | `false` | 테스트가 다른 스레드에서 일으킨 쿼리도 셉니다. 인수 테스트에서 서버가 처리한 요청 같은 것입니다 |
+| `query-counter.max-queries.per-test` | `0` | 한 테스트가 이 수를 넘으면 실패시킵니다. 0 이면 상한이 없습니다 |
+| `query-counter.max-queries.report` | `false` | 테스트마다 쿼리 수를 로그로 남깁니다. 상한을 정할 때 씁니다 |
 
 ```yaml
 query-counter:
@@ -373,9 +375,50 @@ query-counter:
     fail: false
   other-threads:
     enabled: false
+  max-queries:
+    per-test: 0
+    report: false
 ```
 
 모든 프로퍼티가 IDE 자동완성에 설명과 함께 표시됩니다.
+
+### 테스트별 쿼리 수 상한
+
+손으로 적는 어서션은 한 테스트에 대해 정확한 수를 말합니다. 상한은 **모든 테스트에 대해 대략의
+수**를 말하고, 어느 테스트에도 아무것도 안 적습니다.
+
+```yaml
+query-counter:
+  enabled: true
+  max-queries:
+    per-test: 50
+```
+
+**정확한 어서션과 잡는 것이 다릅니다.** 반복문 안에서 리포지토리를 부르면 쿼리 3개가 200개가
+되는데, 상한은 그것이 어느 테스트에서 일어나든 잡습니다. 3개가 12개로 조용히 늘어나는 것은 쓸만한
+상한 아래에 머무릅니다. 그건 괜찮습니다. 상한은 폭주를 막는 그물이고 회귀 검사가 아닙니다.
+
+숫자는 어림수로 잡지 말고 **지금 스위트가 실제로 쓰는 값**을 보고 정하세요.
+
+```yaml
+query-counter:
+  enabled: true
+  max-queries:
+    report: true
+logging:
+  level:
+    soon.springtestutil: info
+```
+
+이러면 테스트마다 한 줄씩 나오므로 스위트의 최대값을 찾기 쉽고, 그보다 여유 있게 상한을 잡으면
+지금 통과하는 것이 깨지지 않습니다. **로깅 한 줄이 중요합니다.** 테스트 설정에서
+`logging.level.root: warn` 을 두면 보고가 걸러집니다. 그 경우에는 경고가 그 사실을 알려 주므로,
+켰는데 아무것도 안 세진 것처럼 보이는 일은 없습니다.
+
+상한에 포함되는데 잊기 쉬운 것이 둘 있습니다. 테스트 준비 과정의 쿼리, 예컨대 테스트 사이에
+테이블을 비우는 리스너의 쿼리도 다른 것과 똑같이 세집니다. 그리고 `other-threads.enabled` 를
+켜면 서버가 요청을 처리하며 날린 쿼리도 세집니다. 둘 다 그 테스트가 실제로 일으킨 것이므로,
+정할 숫자는 보고가 보여주는 그 값입니다.
 
 ### 다른 스레드에서 나간 쿼리도 세기
 

@@ -5,6 +5,7 @@ import org.springframework.test.context.TestExecutionListener;
 import soon.springtestutil.core.context.TestContextHolder;
 import soon.springtestutil.querycount.assertion.NPlusOneWatch;
 import soon.springtestutil.querycount.assertion.QueryCounterAssertion;
+import soon.springtestutil.querycount.assertion.QueryLimitWatch;
 import soon.springtestutil.querycount.context.QueryCountContext;
 
 /**
@@ -50,6 +51,7 @@ public class QueryCountTestExecutionListener implements TestExecutionListener {
             if (testContext.getTestException() == null) {
                 QueryCounterAssertion.verifyPending();
                 NPlusOneWatch.run();
+                QueryLimitWatch.run();
             }
         }
         finally {
