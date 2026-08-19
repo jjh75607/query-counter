@@ -363,6 +363,7 @@ No query was recorded. Is query-counter.enabled=true set in your test configurat
 | `query-counter.logging.enabled` | `false` | Log every executed SQL statement through SLF4J. Independent of counting, and off by default because always-on SQL logging is noisy in projects with many tests |
 | `query-counter.n-plus-one.enabled` | `false` | Check every test for an N+1, with nothing written in the test |
 | `query-counter.n-plus-one.fail` | `false` | Fail the test when that check finds one. When false it is logged as a warning |
+| `query-counter.other-threads.enabled` | `false` | Count queries a test caused on another thread, such as a request handled by the server in an acceptance test |
 
 ```yaml
 query-counter:
@@ -372,9 +373,35 @@ query-counter:
   n-plus-one:
     enabled: false
     fail: false
+  other-threads:
+    enabled: false
 ```
 
 Every property appears with a description in IDE autocompletion.
+
+### Counting queries that ran on another thread
+
+A test that sends a real HTTP request has its queries run by the server, on a worker thread. What
+gets recorded is per thread, so from the test nothing is visible: an acceptance test sees zero
+queries no matter how many the request ran.
+
+`query-counter.other-threads.enabled` collects those and merges them into the test that caused
+them, before any assertion or check runs. Counts, `noNPlusOne()`, and the global N+1 check all see
+the same merged set.
+
+**It is off by default because it assumes one test runs at a time in the JVM.** Sequential JUnit
+holds that, and so does Gradle's `maxParallelForks`, which uses a separate JVM per fork. Parallel
+execution inside one JVM does not: a request from one test can be attributed to another.
+
+Two more things to know before turning it on.
+
+- A query from `@Scheduled` or another background job lands on whichever test was running. Exact
+  counts written by hand can start to move in a project that has those.
+- A request that keeps working after the response is sent can have its last queries attributed to
+  the next test.
+
+Turning it on makes tests visible that were not before, so a project already running the global N+1
+check may see the warning count jump. `fail: false` is the reason that default exists.
 
 ### Checking every test for an N+1
 

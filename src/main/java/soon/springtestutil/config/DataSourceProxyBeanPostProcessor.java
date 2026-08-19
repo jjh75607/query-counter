@@ -38,13 +38,24 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
 
     private final NPlusOneCheck nPlusOneCheck;
 
+    private final boolean collectOtherThreads;
+
     public DataSourceProxyBeanPostProcessor(boolean loggingEnabled) {
-        this(loggingEnabled, NPlusOneCheck.OFF);
+        this(loggingEnabled, NPlusOneCheck.OFF, false);
     }
 
     public DataSourceProxyBeanPostProcessor(boolean loggingEnabled, NPlusOneCheck nPlusOneCheck) {
+        this(loggingEnabled, nPlusOneCheck, false);
+    }
+
+    public DataSourceProxyBeanPostProcessor(
+        boolean loggingEnabled,
+        NPlusOneCheck nPlusOneCheck,
+        boolean collectOtherThreads
+    ) {
         this.loggingEnabled = loggingEnabled;
         this.nPlusOneCheck = nPlusOneCheck;
+        this.collectOtherThreads = collectOtherThreads;
     }
 
     /**
@@ -71,7 +82,8 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
             ProxyFactory factory = new ProxyFactory(bean);
             factory.setProxyTargetClass(true); // 다양한 DataSource 구현체를 지원하기 위해 CGLIB 프록시 사용
             factory.addInterface(QueryCountedDataSource.class);
-            factory.addAdvice(ProxyDataSourceInterceptor.of(dataSource, this.loggingEnabled, this.nPlusOneCheck));
+            factory.addAdvice(ProxyDataSourceInterceptor.of(
+                dataSource, this.loggingEnabled, this.nPlusOneCheck, this.collectOtherThreads));
             return factory.getProxy();
         }
 
@@ -129,13 +141,14 @@ public class DataSourceProxyBeanPostProcessor implements BeanPostProcessor, Prio
         private static ProxyDataSourceInterceptor of(
             DataSource dataSource,
             boolean loggingEnabled,
-            NPlusOneCheck nPlusOneCheck
+            NPlusOneCheck nPlusOneCheck,
+            boolean collectOtherThreads
         ) {
             ChainListener listener = new ChainListener();
             if (loggingEnabled) {
                 listener.addListener(new SLF4JQueryLoggingListener());
             }
-            listener.addListener(new QueryCountListener(nPlusOneCheck));
+            listener.addListener(new QueryCountListener(nPlusOneCheck, collectOtherThreads));
 
             return new ProxyDataSourceInterceptor(
                 ProxyDataSourceBuilder.create(dataSource)

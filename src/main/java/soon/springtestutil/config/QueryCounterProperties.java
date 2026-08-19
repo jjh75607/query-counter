@@ -16,6 +16,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   n-plus-one:
  *     enabled: false
  *     fail: false
+ *   other-threads:
+ *     enabled: false
  * }</pre>
  */
 @ConfigurationProperties(prefix = "query-counter")
@@ -29,6 +31,8 @@ public class QueryCounterProperties {
     private final Logging logging = new Logging();
 
     private final NPlusOne nPlusOne = new NPlusOne();
+
+    private final OtherThreads otherThreads = new OtherThreads();
 
     public boolean isEnabled() {
         return this.enabled;
@@ -44,6 +48,38 @@ public class QueryCounterProperties {
 
     public NPlusOne getNPlusOne() {
         return this.nPlusOne;
+    }
+
+    public OtherThreads getOtherThreads() {
+        return this.otherThreads;
+    }
+
+    /**
+     * Counting queries that a test causes on another thread.
+     *
+     * <p>A test that sends a real HTTP request has its queries run on a server worker thread,
+     * where nothing the test can read sees them. When enabled, those queries are collected and
+     * merged into the test that caused them.
+     *
+     * <p>Disabled by default. It assumes one test runs at a time in the JVM, which holds for
+     * sequential JUnit and for Gradle's parallel forks, but not for parallel execution inside
+     * one JVM.
+     */
+    public static class OtherThreads {
+
+        /**
+         * Whether to count queries that ran on a thread other than the test thread.
+         */
+        private boolean enabled = false;
+
+        public boolean isEnabled() {
+            return this.enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
     }
 
     /**

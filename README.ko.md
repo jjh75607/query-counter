@@ -361,6 +361,7 @@ No query was recorded. Is query-counter.enabled=true set in your test configurat
 | `query-counter.logging.enabled` | `false` | 실행된 SQL을 SLF4J로 출력합니다. 카운팅과 별개이며, 항상 켜져 있으면 테스트가 많은 프로젝트에서 로그가 오염되므로 기본값은 꺼짐입니다 |
 | `query-counter.n-plus-one.enabled` | `false` | 테스트에 아무것도 안 적고, 모든 테스트에서 N+1 을 검사합니다 |
 | `query-counter.n-plus-one.fail` | `false` | 그 검사가 N+1 을 찾으면 실패시킵니다. 꺼져 있으면 경고 로그만 남깁니다 |
+| `query-counter.other-threads.enabled` | `false` | 테스트가 다른 스레드에서 일으킨 쿼리도 셉니다. 인수 테스트에서 서버가 처리한 요청 같은 것입니다 |
 
 ```yaml
 query-counter:
@@ -370,9 +371,33 @@ query-counter:
   n-plus-one:
     enabled: false
     fail: false
+  other-threads:
+    enabled: false
 ```
 
 모든 프로퍼티가 IDE 자동완성에 설명과 함께 표시됩니다.
+
+### 다른 스레드에서 나간 쿼리도 세기
+
+실제 HTTP 요청을 보내는 테스트는 쿼리가 서버 쪽 워커 스레드에서 나갑니다. 기록은 스레드마다
+따로라서 테스트에서는 아무것도 보이지 않습니다. 요청이 쿼리를 몇 개 날렸든 인수 테스트에는
+0으로 보입니다.
+
+`query-counter.other-threads.enabled` 를 켜면 그것들을 모아서, 판정보다 먼저 그 테스트의 기록에
+합칩니다. 카운트와 `noNPlusOne()` 과 전역 N+1 검사가 모두 합쳐진 같은 기록을 봅니다.
+
+**기본이 꺼짐인 이유는 JVM 하나에서 테스트가 한 번에 하나만 돈다고 전제하기 때문입니다.**
+순차로 도는 JUnit 은 그 전제가 맞고, Gradle 의 `maxParallelForks` 도 포크마다 JVM 이 따로라
+괜찮습니다. JVM 안에서 병렬로 돌리면 한 테스트의 요청 쿼리가 다른 테스트에 붙습니다.
+
+켜기 전에 알아둘 것이 둘 더 있습니다.
+
+- `@Scheduled` 나 다른 배경 작업의 쿼리가 그때 돌던 테스트에 붙습니다. 그런 작업이 있는
+  프로젝트에서는 손으로 적은 정확한 수가 흔들릴 수 있습니다.
+- 응답을 보낸 뒤에도 요청 처리가 이어지면 마지막 쿼리 몇 개가 다음 테스트에 붙을 수 있습니다.
+
+켜면 안 보이던 테스트가 보이기 시작하므로, 전역 N+1 검사를 이미 켜 둔 프로젝트에서는 경고 수가
+크게 늘 수 있습니다. `fail: false` 가 기본인 이유가 그것입니다.
 
 ### 모든 테스트에서 N+1 을 검사하기
 
