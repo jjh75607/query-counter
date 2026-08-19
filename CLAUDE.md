@@ -140,6 +140,7 @@ Spring Boot 버전마다 다르다.
 | `QueryCountListener` | `queryTypeCache` 가 SQL 문자열 키의 static 맵인데 비워지지 않는다 |
 | `QueryCountListener` | `elapsedMs` 가 실행 단위 값인데 배치의 모든 쿼리에 같은 값이 붙는다 |
 | `QueryInfo` | 생성자가 테이블 이름을 항상 정규식으로 추출한다. 안 쓰는 경우에도 |
+| `QueryCountListener` | `other-threads` 를 끈 채 HTTP 테스트를 돌리면 워커 스레드의 `ThreadLocal` 에 기록이 쌓이고 아무도 비우지 않는다. 읽을 수도 없는 기록이다. 버리는 쪽으로 바꿔 봤다가 기존 테스트 다섯 개가 깨져 되돌렸다 |
 | `QueryCountVerifier` | 229줄에 private 메서드 13개. 검사를 하나 더 추가하기 전에 검사 단위를 인터페이스로 뽑는 편이 낫다 |
 | `QueryCounterAssertion` | 검증하지 않은 어서션을 static ThreadLocal 목록으로 들고 있다. 리스너가 비우지만 전역 상태가 하나 늘어난 것은 사실이다 |
 

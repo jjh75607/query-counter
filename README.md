@@ -473,7 +473,7 @@ It is a net, not a full sweep. Turning it on does not mean every N+1 in the suit
 | A query whose values are not bound | Values written into the SQL string make each execution a different statement, so they are never grouped |
 | A repeated INSERT or UPDATE | Only SELECTs are considered |
 | An association shared by every row | The persistence context reads it once and serves the rest from memory, so no repeat reaches the database |
-| Queries executed on another thread | They are not recorded at all. A property of the counting itself, not of this check |
+| Queries executed on another thread | Not recorded unless `query-counter.other-threads.enabled` is on. A property of the counting itself, not of this check |
 
 The other direction happens too. A test that reads in a loop on purpose, a parameterized test running
 the same query with different values, and paging through results are all reported like any other
