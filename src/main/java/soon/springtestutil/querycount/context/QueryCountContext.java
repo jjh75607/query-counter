@@ -1,5 +1,6 @@
 package soon.springtestutil.querycount.context;
 
+import soon.springtestutil.querycount.NPlusOneCheck;
 import soon.springtestutil.querycount.QueryType;
 
 import java.util.ArrayList;
@@ -17,6 +18,9 @@ import java.util.stream.Collectors;
  * an assertion completes. Tests that never assert must clear it themselves.
  */
 public final class QueryCountContext {
+
+    private static final ThreadLocal<NPlusOneCheck> nPlusOneCheck =
+        ThreadLocal.withInitial(() -> NPlusOneCheck.OFF);
 
     private static final ThreadLocal<List<QueryInfo>> queries = ThreadLocal
         .withInitial(ArrayList::new);
@@ -45,6 +49,25 @@ public final class QueryCountContext {
             .add(new QueryInfo(queryType, query, executionTimeMs, parameters));
     }
 
+    /**
+     * Records how the N+1 check should behave for the current test.
+     *
+     * <p>Internal wiring rather than part of the assertion API. The setting lives in the
+     * application context, and the listener that ends each test must not touch that context,
+     * so the recording side carries it here instead. A static field was tried before and
+     * removed because it never reset between tests.
+     */
+    public static void requestNPlusOneCheck(NPlusOneCheck check) {
+        nPlusOneCheck.set(check);
+    }
+
+    /**
+     * Returns the N+1 check mode for the current test, {@link NPlusOneCheck#OFF} by default.
+     */
+    public static NPlusOneCheck getNPlusOneCheck() {
+        return nPlusOneCheck.get();
+    }
+
     public static List<QueryInfo> getQueries() {
         return new ArrayList<>(queries.get());
     }
@@ -60,6 +83,7 @@ public final class QueryCountContext {
 
     public static void clear() {
         queries.remove();
+        nPlusOneCheck.remove();
     }
 
 }

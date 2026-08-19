@@ -13,6 +13,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   enabled: true
  *   logging:
  *     enabled: false
+ *   n-plus-one:
+ *     enabled: false
+ *     fail: false
  * }</pre>
  */
 @ConfigurationProperties(prefix = "query-counter")
@@ -25,6 +28,8 @@ public class QueryCounterProperties {
 
     private final Logging logging = new Logging();
 
+    private final NPlusOne nPlusOne = new NPlusOne();
+
     public boolean isEnabled() {
         return this.enabled;
     }
@@ -35,6 +40,46 @@ public class QueryCounterProperties {
 
     public Logging getLogging() {
         return this.logging;
+    }
+
+    public NPlusOne getNPlusOne() {
+        return this.nPlusOne;
+    }
+
+    /**
+     * The N+1 check that runs for every test without an assertion being written.
+     *
+     * <p>Disabled by default. Turning it on in a suite that has never had it will surface
+     * every N+1 already there at once, so it only warns until {@code fail} is set as well.
+     */
+    public static class NPlusOne {
+
+        /**
+         * Whether to check every test for an N+1, with no assertion written in the test.
+         */
+        private boolean enabled = false;
+
+        /**
+         * Whether a detected N+1 fails the test. When false, it is logged as a warning.
+         */
+        private boolean fail = false;
+
+        public boolean isEnabled() {
+            return this.enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean isFail() {
+            return this.fail;
+        }
+
+        public void setFail(boolean fail) {
+            this.fail = fail;
+        }
+
     }
 
     /**

@@ -3,6 +3,7 @@ package soon.springtestutil.querycount.extension;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestExecutionListener;
 import soon.springtestutil.core.context.TestContextHolder;
+import soon.springtestutil.querycount.assertion.NPlusOneWatch;
 import soon.springtestutil.querycount.assertion.QueryCounterAssertion;
 import soon.springtestutil.querycount.context.QueryCountContext;
 
@@ -48,6 +49,7 @@ public class QueryCountTestExecutionListener implements TestExecutionListener {
             // 그러지 않으면 진짜 실패 위에 쿼리 카운트 실패가 덮여 원인이 가려진다.
             if (testContext.getTestException() == null) {
                 QueryCounterAssertion.verifyPending();
+                NPlusOneWatch.run();
             }
         }
         finally {

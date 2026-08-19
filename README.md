@@ -337,6 +337,17 @@ N+1 assertion failed: 1 query shape ran with different parameter values
     params: [1], [2], [3]
 ```
 
+The check that runs for every test uses the same layout with a different first line, `N+1 detected`
+while it only warns and `N+1 check failed` once `fail` is set:
+
+```text
+java.lang.AssertionError: [Test: {package}.{class}#{method}]
+N+1 check failed: 1 query shape ran with different parameter values
+[1] 3 executions, 3 distinct parameter values
+    SQL: select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+    params: [1], [2], [3]
+```
+
 When an assertion fails and no query was recorded at all, the message adds a reminder, because the
 usual cause is a missing setting:
 
@@ -350,15 +361,96 @@ No query was recorded. Is query-counter.enabled=true set in your test configurat
 |---|---|---|
 | `query-counter.enabled` | `false` | Count queries. When enabled, the DataSource is wrapped in a proxy that records every executed query |
 | `query-counter.logging.enabled` | `false` | Log every executed SQL statement through SLF4J. Independent of counting, and off by default because always-on SQL logging is noisy in projects with many tests |
+| `query-counter.n-plus-one.enabled` | `false` | Check every test for an N+1, with nothing written in the test |
+| `query-counter.n-plus-one.fail` | `false` | Fail the test when that check finds one. When false it is logged as a warning |
 
 ```yaml
 query-counter:
   enabled: true
   logging:
     enabled: false
+  n-plus-one:
+    enabled: false
+    fail: false
 ```
 
-Both properties appear with descriptions in IDE autocompletion.
+Every property appears with a description in IDE autocompletion.
+
+### Checking every test for an N+1
+
+`noNPlusOne()` covers the test you write it in. That means a suite with hundreds of existing tests
+gets no cover at all, which is where an N+1 you fixed six months ago comes back.
+
+Turning on `query-counter.n-plus-one.enabled` runs the same check at the end of every test, with
+nothing written in the test.
+
+**`query-counter.enabled=true` has to be on as well.** Queries are only recorded when the DataSource
+is wrapped, and that only happens when counting is enabled, so this check on its own does nothing at
+all. Both go in the same block:
+
+```yaml
+query-counter:
+  enabled: true
+  n-plus-one:
+    enabled: true
+```
+
+**It only warns until you also set `fail`.** Turning the check on in a suite that never had it will
+surface every N+1 already there, all at once. Failing all of them on the first run leaves nothing to
+do but switch the check back off, so the order is: turn it on, read the list, work through it, then
+set `fail: true` to keep it from coming back.
+
+The rule is the same one `noNPlusOne()` uses: the same SELECT running with different parameter
+values. Repeats with identical values are duplicate reads, not an N+1, and are not reported.
+
+Nothing is written in the test. The example below is a real test in
+[`src/test/java/soon/springtestutil/example/GlobalNPlusOneExampleTest.java`](src/test/java/soon/springtestutil/example/GlobalNPlusOneExampleTest.java),
+so it compiles and runs with `./gradlew build`.
+
+```java
+@SpringBootTest(classes = ExampleApplication.class, properties = {
+    "query-counter.enabled=true",
+    "query-counter.n-plus-one.enabled=true"
+})
+@Transactional
+class GlobalNPlusOneExampleTest {
+
+    @Test
+    void reportsNPlusOneWithoutAnyAssertion() {
+        // given
+        saveMembersInSeparateTeams(3);
+        QueryCountContext.clear();
+
+        // when - members are read, then each team name is touched
+        memberRepository.findAllLazily().forEach(member -> member.getTeam().getName());
+
+        // then - there is nothing to write. The check runs once this method returns
+    }
+
+}
+```
+
+That test passes, and the warning it produces looks like the message below. With `fail: true` the
+same finding fails the test instead.
+
+### What the check does not see
+
+It is a net, not a full sweep. Turning it on does not mean every N+1 in the suite is now covered.
+
+| Not reported | Why |
+|---|---|
+| A test with a single row of fixture data | One repeat means one parameter value, and the rule needs two. The N+1 is in the code but nothing repeats |
+| A query whose values are not bound | Values written into the SQL string make each execution a different statement, so they are never grouped |
+| A repeated INSERT or UPDATE | Only SELECTs are considered |
+| An association shared by every row | The persistence context reads it once and serves the rest from memory, so no repeat reaches the database |
+| Queries executed on another thread | They are not recorded at all. A property of the counting itself, not of this check |
+
+The other direction happens too. A test that reads in a loop on purpose, a parameterized test running
+the same query with different values, and paging through results are all reported like any other
+finding. That is what `fail: false` is for while you work through the list.
+
+Where an exact number matters, an assertion written by hand still says it better than this check
+does.
 
 ## Changelog
 

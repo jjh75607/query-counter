@@ -6,6 +6,7 @@ import net.ttddyy.dsproxy.QueryInfo;
 import net.ttddyy.dsproxy.listener.QueryExecutionListener;
 import net.ttddyy.dsproxy.proxy.ParameterSetOperation;
 import soon.springtestutil.core.context.TestContextHolder;
+import soon.springtestutil.querycount.NPlusOneCheck;
 import soon.springtestutil.querycount.QueryType;
 import soon.springtestutil.querycount.context.QueryCountContext;
 
@@ -19,12 +20,26 @@ public class QueryCountListener implements QueryExecutionListener {
 
     private static final ConcurrentMap<String, QueryType> queryTypeCache = new ConcurrentHashMap<>();
 
+    private final NPlusOneCheck nPlusOneCheck;
+
+    public QueryCountListener() {
+        this(NPlusOneCheck.OFF);
+    }
+
+    public QueryCountListener(NPlusOneCheck nPlusOneCheck) {
+        this.nPlusOneCheck = nPlusOneCheck;
+    }
+
     @Override
     public void beforeQuery(ExecutionInfo execInfo, List<QueryInfo> queryInfoList) {
     }
 
     @Override
     public void afterQuery(ExecutionInfo execInfo, List<QueryInfo> queryInfoList) {
+        // 설정은 애플리케이션 컨텍스트에 있고 테스트를 끝내는 리스너는 그 컨텍스트를 만질 수
+        // 없다. 그래서 기록하는 이쪽이 모드를 같은 ThreadLocal 에 실어 나른다.
+        QueryCountContext.requestNPlusOneCheck(nPlusOneCheck);
+
         Long elapsedMs = null;
         try {
             if (execInfo != null) {

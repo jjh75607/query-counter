@@ -336,6 +336,17 @@ N+1 assertion failed: 1 query shape ran with different parameter values
     params: [1], [2], [3]
 ```
 
+모든 테스트에서 도는 검사는 같은 형식에 첫 줄만 다릅니다. 경고만 남길 때는 `N+1 detected`,
+`fail` 을 켜면 `N+1 check failed` 입니다.
+
+```text
+java.lang.AssertionError: [Test: {패키지}.{클래스}#{메서드}]
+N+1 check failed: 1 query shape ran with different parameter values
+[1] 3 executions, 3 distinct parameter values
+    SQL: select t1_0.id,t1_0.name from team t1_0 where t1_0.id=?
+    params: [1], [2], [3]
+```
+
 검증이 실패했는데 기록된 쿼리가 하나도 없으면 안내가 덧붙습니다. 대개 설정을 빠뜨린 경우입니다.
 
 ```text
@@ -348,15 +359,95 @@ No query was recorded. Is query-counter.enabled=true set in your test configurat
 |---|---|---|
 | `query-counter.enabled` | `false` | 쿼리 카운팅. 켜면 DataSource를 프록시로 감싸 실행된 쿼리를 기록합니다 |
 | `query-counter.logging.enabled` | `false` | 실행된 SQL을 SLF4J로 출력합니다. 카운팅과 별개이며, 항상 켜져 있으면 테스트가 많은 프로젝트에서 로그가 오염되므로 기본값은 꺼짐입니다 |
+| `query-counter.n-plus-one.enabled` | `false` | 테스트에 아무것도 안 적고, 모든 테스트에서 N+1 을 검사합니다 |
+| `query-counter.n-plus-one.fail` | `false` | 그 검사가 N+1 을 찾으면 실패시킵니다. 꺼져 있으면 경고 로그만 남깁니다 |
 
 ```yaml
 query-counter:
   enabled: true
   logging:
     enabled: false
+  n-plus-one:
+    enabled: false
+    fail: false
 ```
 
-두 프로퍼티 모두 IDE 자동완성에 설명과 함께 표시됩니다.
+모든 프로퍼티가 IDE 자동완성에 설명과 함께 표시됩니다.
+
+### 모든 테스트에서 N+1 을 검사하기
+
+`noNPlusOne()` 은 그것을 적은 테스트만 덮습니다. 그러면 테스트가 이미 수백 개인 스위트는
+아무것도 못 덮는데, 6개월 전에 고친 N+1 이 돌아오는 자리가 바로 거기입니다.
+
+`query-counter.n-plus-one.enabled` 를 켜면 같은 검사가 모든 테스트 끝에서 돕니다. 테스트에는
+아무것도 안 적습니다.
+
+**`query-counter.enabled=true` 도 함께 켜야 합니다.** 쿼리는 DataSource 가 감싸질 때만 기록되고
+그것은 카운팅을 켰을 때만 일어나므로, 이 검사만 켜면 아무 일도 하지 않습니다. 둘을 같은 블록에
+씁니다.
+
+```yaml
+query-counter:
+  enabled: true
+  n-plus-one:
+    enabled: true
+```
+
+**`fail` 을 함께 켜기 전까지는 경고만 남깁니다.** 한 번도 검사한 적 없는 스위트에 켜면 이미
+있던 N+1 이 한꺼번에 다 드러납니다. 첫 실행에서 그것들을 전부 실패시키면 검사를 다시 끄는 것
+말고는 할 수 있는 일이 없으니, 순서는 이렇습니다. 켜서 목록을 읽고, 하나씩 고치고, 그다음
+`fail: true` 로 돌아오지 못하게 막습니다.
+
+판정 기준은 `noNPlusOne()` 과 같습니다. 같은 SELECT 가 파라미터 값을 바꿔 여러 번 실행된
+경우입니다. 값까지 같은 반복은 N+1 이 아니라 중복 조회이므로 보고하지 않습니다.
+
+테스트에는 아무것도 적지 않습니다. 아래 예제는
+[`src/test/java/soon/springtestutil/example/GlobalNPlusOneExampleTest.java`](src/test/java/soon/springtestutil/example/GlobalNPlusOneExampleTest.java)
+의 실제 테스트라 `./gradlew build` 로 컴파일되고 실행됩니다.
+
+```java
+@SpringBootTest(classes = ExampleApplication.class, properties = {
+    "query-counter.enabled=true",
+    "query-counter.n-plus-one.enabled=true"
+})
+@Transactional
+class GlobalNPlusOneExampleTest {
+
+    @Test
+    void reportsNPlusOneWithoutAnyAssertion() {
+        // given
+        saveMembersInSeparateTeams(3);
+        QueryCountContext.clear();
+
+        // when - 회원을 읽고 각자의 팀 이름을 꺼낸다
+        memberRepository.findAllLazily().forEach(member -> member.getTeam().getName());
+
+        // then - 적을 것이 없다. 검사는 이 메서드가 끝난 뒤에 돈다
+    }
+
+}
+```
+
+이 테스트는 통과하고, 남는 경고는 아래 메시지 형식과 같습니다. `fail: true` 면 같은 것이
+테스트를 실패시킵니다.
+
+### 이 검사가 못 보는 것
+
+전수 검사가 아니라 그물입니다. 켠다고 스위트의 N+1 이 전부 덮이는 것은 아닙니다.
+
+| 보고하지 않는 경우 | 왜 |
+|---|---|
+| 픽스처 데이터가 1건인 테스트 | 반복이 1회면 파라미터 값도 하나인데 판정에는 둘이 필요합니다. 코드에 N+1 이 있어도 반복될 것이 없습니다 |
+| 값을 바인딩하지 않는 쿼리 | 값이 SQL 문자열에 들어가면 실행마다 다른 문장이 되어 한 모양으로 묶이지 않습니다 |
+| 반복되는 INSERT 나 UPDATE | SELECT 만 봅니다 |
+| 모든 행이 같은 연관을 가리키는 경우 | 영속성 컨텍스트가 한 번 읽고 나머지는 메모리에서 주므로 DB 까지 반복이 가지 않습니다 |
+| 다른 스레드에서 실행된 쿼리 | 애초에 기록되지 않습니다. 이 검사가 아니라 카운팅 자체의 성질입니다 |
+
+반대 방향도 있습니다. 일부러 반복문에서 조회하는 테스트, 파라미터화 테스트에서 값만 바꿔 같은
+쿼리를 날리는 경우, 결과를 페이지로 나눠 읽는 경우가 모두 다른 것과 똑같이 보고됩니다. 목록을
+정리하는 동안 `fail: false` 로 두는 이유가 그것입니다.
+
+정확한 숫자가 중요한 자리에는 이 검사보다 손으로 적은 어서션이 여전히 낫습니다.
 
 ## 변경 이력
 

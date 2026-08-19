@@ -225,34 +225,10 @@ class QueryCountVerifier {
     }
 
     private String formatNPlusOneError(List<NPlusOneDetector.Finding> findings) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format("N+1 assertion failed: %d query %s ran with different parameter values",
-            findings.size(), findings.size() == 1 ? "shape" : "shapes"));
-
-        int reportCount = Math.min(findings.size(), MAX_VIOLATIONS_TO_REPORT);
-        for (int i = 0; i < reportCount; i++) {
-            NPlusOneDetector.Finding finding = findings.get(i);
-            sb.append(String.format("\n[%d] %d executions, %d distinct parameter values\n    SQL: %s\n    params: %s",
-                i + 1,
-                finding.executionCount(),
-                finding.distinctParameters().size(),
-                finding.sql(),
-                describeParameters(finding.distinctParameters())));
-        }
-
-        if (findings.size() > MAX_VIOLATIONS_TO_REPORT) {
-            sb.append(String.format("\n... and %d more", findings.size() - MAX_VIOLATIONS_TO_REPORT));
-        }
-
-        return sb.toString();
-    }
-
-    private String describeParameters(List<List<List<Object>>> distinctParameters) {
-        return distinctParameters.stream()
-            .limit(MAX_VIOLATIONS_TO_REPORT)
-            .map(sets -> sets.size() == 1 ? sets.get(0).toString() : sets.toString())
-            .collect(Collectors.joining(", "))
-            + (distinctParameters.size() > MAX_VIOLATIONS_TO_REPORT ? ", ..." : "");
+        String headline = String.format(
+            "N+1 assertion failed: %d query %s ran with different parameter values",
+            findings.size(), findings.size() == 1 ? "shape" : "shapes");
+        return NPlusOneDetector.format(findings, headline);
     }
 
     private String formatExecutionTimeError(List<QueryInfo> violations, long maxTime, String tableName) {
