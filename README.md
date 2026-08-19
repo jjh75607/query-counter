@@ -384,6 +384,17 @@ gets no cover at all, which is where an N+1 you fixed six months ago comes back.
 Turning on `query-counter.n-plus-one.enabled` runs the same check at the end of every test, with
 nothing written in the test.
 
+**`query-counter.enabled=true` has to be on as well.** Queries are only recorded when the DataSource
+is wrapped, and that only happens when counting is enabled, so this check on its own does nothing at
+all. Both go in the same block:
+
+```yaml
+query-counter:
+  enabled: true
+  n-plus-one:
+    enabled: true
+```
+
 **It only warns until you also set `fail`.** Turning the check on in a suite that never had it will
 surface every N+1 already there, all at once. Failing all of them on the first run leaves nothing to
 do but switch the check back off, so the order is: turn it on, read the list, work through it, then
@@ -422,9 +433,24 @@ class GlobalNPlusOneExampleTest {
 That test passes, and the warning it produces looks like the message below. With `fail: true` the
 same finding fails the test instead.
 
-Two limits are worth knowing. A test that deliberately reads in a loop is reported like any other,
-so it needs `fail: false` or a rewritten test. And queries executed on another thread are not
-recorded at all, which is a property of the counting itself, not of this check.
+### What the check does not see
+
+It is a net, not a full sweep. Turning it on does not mean every N+1 in the suite is now covered.
+
+| Not reported | Why |
+|---|---|
+| A test with a single row of fixture data | One repeat means one parameter value, and the rule needs two. The N+1 is in the code but nothing repeats |
+| A query whose values are not bound | Values written into the SQL string make each execution a different statement, so they are never grouped |
+| A repeated INSERT or UPDATE | Only SELECTs are considered |
+| An association shared by every row | The persistence context reads it once and serves the rest from memory, so no repeat reaches the database |
+| Queries executed on another thread | They are not recorded at all. A property of the counting itself, not of this check |
+
+The other direction happens too. A test that reads in a loop on purpose, a parameterized test running
+the same query with different values, and paging through results are all reported like any other
+finding. That is what `fail: false` is for while you work through the list.
+
+Where an exact number matters, an assertion written by hand still says it better than this check
+does.
 
 ## Changelog
 
