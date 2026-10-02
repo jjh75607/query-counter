@@ -169,7 +169,7 @@ querycount/
 | `QueryCountListener` | `elapsedMs` 가 실행 단위 값인데 배치의 모든 쿼리에 같은 값이 붙는다 |
 | `QueryInfo` | 생성자가 테이블 이름을 항상 정규식으로 추출한다. 안 쓰는 경우에도 |
 | `QueryCountListener` | `queryTypeCache` 와 같은 성질로, 상한에 닿은 뒤에는 테스트 스레드 밖 기록을 버린다. 무한히 쌓이는 것은 막았지만 읽을 수도 없는 기록을 1만 개까지는 들고 있다 |
-| `QueryCountVerifier` | 301줄에 private 메서드 24개. 검사를 하나 더 추가하기 전에 검사 단위를 인터페이스로 뽑는 편이 낫다 |
+| `QueryCountVerifier` | 검사 종류마다 private 메서드가 붙어 한 클래스에 쌓여 있다. 검사를 하나 더 추가하기 전에 검사 단위를 인터페이스로 뽑는 편이 낫다 |
 | `QueryCounterAssertion` | 검증하지 않은 어서션을 static ThreadLocal 목록으로 들고 있다. 리스너가 비우지만 전역 상태가 하나 늘어난 것은 사실이다 |
 
 ## 작업 규칙

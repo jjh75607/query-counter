@@ -21,7 +21,7 @@ tools: Read, Edit, Write, Bash, Grep, Glob
 ./gradlew build
 ```
 
-로컬 빌드는 JDK 17이다. checkstyle, format, spotless 태스크는 없다.
+로컬 빌드는 JDK 17이다. 포맷은 Spotless 가 검사하고 그 검사는 `./gradlew build` 에 포함된다. 포맷으로 실패하면 `./gradlew spotlessApply` 로 고친다. checkstyle 은 없다.
 
 ## 최우선: 기존 관례를 따른다
 
@@ -77,7 +77,7 @@ tools: Read, Edit, Write, Bash, Grep, Glob
 - 테스트 간 독립성을 보장한다. 공유 변수와 공유 객체를 쓰지 않는다.
 - 예외를 검증할 때는 타입만 보지 말고 메시지의 핵심 문구까지 확인한다. 오류 메시지가 이 라이브러리의 산출물이다.
 
-**이 저장소에는 전역 가변 상태가 있다.** `QueryCountContext`의 ThreadLocal과 `active` 플래그, `QueryCountListener`의 `queryTypeCache`다. 테스트가 서로 오염되지 않게 `@BeforeEach`에서 `QueryCountContext.clear()`를 부르거나 `@ExtendWith(QueryCountTestExtension.class)`를 붙인다. 앞 테스트의 상태에 의존하는 테스트를 쓰지 않는다.
+**이 저장소에는 static 가변 상태가 있다.** 쿼리 기록과 검증 대기 어서션 같은 테스트별 상태는 Spring 테스트에서는 `spring.factories` 로 등록된 `QueryCountTestExecutionListener` 가, Spring 컨텍스트 없는 테스트에서는 `@ExtendWith(QueryCountTestExtension.class)` 가 테스트마다 비운다. 테스트 안에서 기록만 지울 때는 형제 테스트처럼 `QueryCountContext.clear()` 를 부른다. `QueryCountListener` 와 `QueryLimitWatch` 의 한 번만 내는 경고 플래그는 JVM 안에서 리셋되지 않으므로, 경고가 나는지 단정하는 테스트는 실행 순서에 따라 결과가 달라질 수 있다. 앞 테스트의 상태에 의존하는 테스트를 쓰지 않는다.
 
 ## Test Fixture
 
